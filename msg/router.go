@@ -1,0 +1,43 @@
+package msg
+
+import (
+	"compress/flate"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
+	"github.com/go-chi/render"
+	l "github.com/treastech/logger"
+	"gitlab.uncharted.software/WM/wm-request-queue/config"
+	"gitlab.uncharted.software/WM/wm-request-queue/msg/routes"
+)
+
+// NewRouter returns a chi router with endpoints registered.
+func NewRouter(cfg config.Config) (chi.Router, error) {
+
+	// Setup the router and configure baseline middleware
+	r := chi.NewRouter()
+
+	r.Use(l.Logger(cfg.Logger.Desugar()))
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Recoverer)
+	// TODO: Add logger middleware that works with zap
+	r.Use(middleware.Compress(flate.DefaultCompression))
+
+	// Configure CORS handling
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowCredentials: true,
+	})
+	r.Use(c.Handler)
+
+	r.Route("/enqueue", func(r chi.Router) {
+		r.Use(render.SetContentType(render.ContentTypeJSON))
+		r.Post("/data-pipeline", routes.EnqueueDataPipelineRequest(&cfg))
+	})
+
+	return r, nil
+}
