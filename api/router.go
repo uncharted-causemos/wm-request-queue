@@ -35,7 +35,8 @@ func NewRouter(cfg config.Config) (chi.Router, error) {
 
 	r.Route("/data-pipeline", func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
-		r.Post("/enqueue", routes.EnqueueDataPipelineRequest(&cfg))
+		r.Put("/enqueue", routes.EnqueueRequest(&cfg)) // PUT instead of post due to idempotency
+		r.Get("/waiting", routes.Waiting(&cfg))
 	})
 
 	return r, nil
