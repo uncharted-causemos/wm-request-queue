@@ -1,4 +1,4 @@
-package msg
+package api
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 	"github.com/machinebox/graphql"
 	"github.com/pkg/errors"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/routes"
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
-	"gitlab.uncharted.software/WM/wm-request-queue/msg/routes"
 )
 
 // DataPipelineRunner services the request queue

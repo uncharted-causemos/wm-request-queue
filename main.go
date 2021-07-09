@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"gitlab.uncharted.software/WM/wm-request-queue/api"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/queue"
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
-	"gitlab.uncharted.software/WM/wm-request-queue/msg"
-	"gitlab.uncharted.software/WM/wm-request-queue/queue"
 	"go.uber.org/zap"
 )
 
@@ -27,6 +27,7 @@ func main() {
 		logger, err = zap.NewDevelopment()
 	case "prod":
 		logger, err = zap.NewProduction()
+
 	default:
 		err = fmt.Errorf("Invalid 'mode' flag: %s", env.Mode)
 	}
@@ -48,13 +49,13 @@ func main() {
 		Environment:  env,
 		RequestQueue: requestQueue,
 	}
-	r, err := msg.NewRouter(routerConfig)
+	r, err := api.NewRouter(routerConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Setup the prefect mediator
-	dataPipelineRunner := msg.NewDataPipelineRunner(&routerConfig)
+	dataPipelineRunner := api.NewDataPipelineRunner(&routerConfig)
 	dataPipelineRunner.Start()
 
 	// Log config

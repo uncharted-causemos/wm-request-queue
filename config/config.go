@@ -1,7 +1,7 @@
 package config
 
 import (
-	"gitlab.uncharted.software/WM/wm-request-queue/queue"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/queue"
 	"go.uber.org/zap"
 )
 
