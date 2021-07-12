@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,7 +57,7 @@ func (d *DataPipelineRunner) Start() {
 				} else {
 					activeFlowRuns := len(running.FlowRun)
 					if activeFlowRuns == 0 {
-						request, ok := d.Config.RequestQueue.Dequeue().(routes.EnqueuePipelineData)
+						request, ok := d.Config.RequestQueue.Dequeue().(routes.KeyedEnqueueRequestData)
 						if !ok {
 							d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
 						}
@@ -119,7 +120,7 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 }
 
 // Submits a flow run request to prefect.
-func (d *DataPipelineRunner) submitFlowRunRequest(request routes.EnqueuePipelineData) error {
+func (d *DataPipelineRunner) submitFlowRunRequest(request routes.KeyedEnqueueRequestData) error {
 
 	runName := fmt.Sprintf("%s:%s", request.ModelID, request.RunID)
 	flowParameters, err := json.Marshal(request)
@@ -134,8 +135,9 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request routes.EnqueuePipeline
 	// and the same error can be replicated through the Prefect "Interactive API" in the UI.  It seems
 	// to a bug in how the prefect server parses the JSON stored in the parameters string.  For now the
 	// best we can do is include the JSON through string formatting.
-	requestStr := fmt.Sprintf("mutation($id: String, $runName: String) {"+
+	requestStr := fmt.Sprintf("mutation($id: String, $runName: String, $key: String) {"+
 		"create_flow_run(input: { "+
+		"   idempotency_key: $key, "+
 		"	version_group_id: $id, "+
 		"	flow_run_name: $runName, "+
 		"	parameters: \"%s\""+
@@ -148,6 +150,14 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request routes.EnqueuePipeline
 
 	mutation.Var("id", d.Environment.DataPipelineTileFlowID)
 	mutation.Var("runName", runName)
+
+	// set the key to use for prefect's idempotency checks - if a pipeline is run to completion,
+	// SUCESSFULLY or UNSUCESSFULLY, an attempt to re-run with the same key will result in it being
+	// skipped.
+	if d.Config.Environment.DataPipelineIdempotencyChecks {
+		idempotencyKey := strconv.FormatUint(uint64(request.RequestKey), 16)
+		mutation.Var("key", idempotencyKey)
+	}
 
 	// run it and capture the response
 	var respData activeFlowRuns

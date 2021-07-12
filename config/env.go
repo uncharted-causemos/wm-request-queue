@@ -26,6 +26,8 @@ type Environment struct {
 	DataPipelinePollIntervalSec int `default:"5"`
 	// Flow version group ID for the baseline tile flow
 	DataPipelineTileFlowID string `default:"4d8d9239-2594-45af-9ec9-d24eafb1f1af"`
+	// Enable idempotency checks on prefect
+	DataPipelineIdempotencyChecks bool `default:"true"`
 }
 
 func (e Environment) String() string {
