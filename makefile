@@ -1,3 +1,5 @@
+export GOPROXY=direct
+
 VERSION=`git describe --tags`
 TIMESTAMP=`date +%FT%T%z`
 
@@ -11,23 +13,27 @@ all:
 	@echo "commands:"
 	@echo "  build         - build the source code"
 	@echo "  fmt           - format the source code"
-	@echo "  install       - install dependencies"
+	@echo "  lint          - lint the source code"
+	@echo "  install       - install dev dependencies"
+	@echo "  test          - run tests"
 
 lint:
-	@golangci-lint run
+	@go vet ./...
+	@go list ./... | grep -v /vendor/ | xargs -L1 golint --set_exit_status
 
 fmt:
 	@go fmt ./...
 
 build: lint
-	@go build -i ${LDFLAGS}
+	@go build ${LDFLAGS}
 
 compile: lint
 	@go build ./...
 
 test: build
-	@go test ./...
+	@go test -race -cover $$(go list ./...)
 
 install:
-	@go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.33.0
+	@go get -u golang.org/x/lint/golint
 	@go get github.com/unchartedsoftware/witch
+
