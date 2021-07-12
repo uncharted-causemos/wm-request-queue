@@ -31,7 +31,7 @@ FROM scratch
 
 # Copy certificate from the builder image. It is required to make https requests
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /go/src/wm-request-queue/bin /
+COPY --from=builder /go/src/wm-request-queue/wm-request-queue /
 
 ENTRYPOINT ["/wm-request-queue"]
 
