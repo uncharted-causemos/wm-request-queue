@@ -11,9 +11,6 @@ ARG GITLAB_TOKEN
 
 RUN apk update && apk add --no-cache git && apk add --no-cach make && apk --no-cache add ca-certificates
 
-# add bash + packages to support CGO
-RUN apk add bash git build-base     findutils
-
 # Gitlab reads following login information from ~/.netrc file
 RUN echo "machine gitlab.uncharted.software login ${GITLAB_LOGIN} password ${GITLAB_TOKEN}" > ~/.netrc
 RUN cat ~/.netrc
@@ -22,7 +19,7 @@ WORKDIR /go/src/wm-request-queue
 
 COPY . .
 
-RUN make install && make build
+RUN make install && make build_static
 
 ############################
 # STEP 2 build an image
@@ -33,6 +30,6 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/src/wm-request-queue/wm-request-queue /
 
-ENTRYPOINT ["/wm-request-queue"]
+CMD ["/wm-request-queue"]
 
-EXPOSE 4040
+EXPOSE 4400

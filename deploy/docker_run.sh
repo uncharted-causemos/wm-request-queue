@@ -8,5 +8,4 @@ docker run \
    --name wm-request-queue \
    --rm \
    -p 4040:4040 \
-   $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION \
-   wm-request-queue
+   $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION
