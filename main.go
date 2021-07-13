@@ -41,7 +41,7 @@ func main() {
 	sugar := logger.Sugar()
 
 	// Setup the request queue
-	requestQueue := queue.NewSimpleRequestQueue(env.DataPipelineQueueSize)
+	requestQueue := queue.NewServiceRequestQueue(env.DataPipelineQueueSize)
 
 	// Setup router
 	routerConfig := config.Config{
