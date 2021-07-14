@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEnqueueDequeue(t *testing.T) {
-	queue := NewServiceRequestQueue(2)
+func TestListEnqueueDequeue(t *testing.T) {
+	queue := NewListFIFOQueue(2)
 
 	result := queue.Enqueue(10)
 	assert.True(t, result)
@@ -33,8 +33,8 @@ func TestEnqueueDequeue(t *testing.T) {
 	assert.Equal(t, 0, count)
 }
 
-func TestBlockingDequeue(t *testing.T) {
-	queue := NewServiceRequestQueue(2)
+func TestListBlockingDequeue(t *testing.T) {
+	queue := NewListFIFOQueue(2)
 
 	queue.Enqueue(10)
 	queue.Enqueue(20)
@@ -59,4 +59,25 @@ func TestBlockingDequeue(t *testing.T) {
 
 	assert.Equal(t, 30, dequeueResult)
 	assert.Equal(t, 0, queue.Size())
+}
+
+func TestHashedEnqueueDequeue(t *testing.T) {
+	queue := NewListFIFOQueue(2)
+
+	result := queue.EnqueueHashed(1, 10)
+	assert.True(t, result)
+	result = queue.EnqueueHashed(1, 10)
+	assert.True(t, result)
+	count := queue.Size()
+	assert.Equal(t, 1, count)
+	result = queue.EnqueueHashed(2, 20)
+	assert.True(t, result)
+
+	dequeueResult := queue.Dequeue().(int)
+	assert.Equal(t, 10, dequeueResult)
+	dequeueResult = queue.Dequeue().(int)
+	assert.Equal(t, 20, dequeueResult)
+
+	count = queue.Size()
+	assert.Equal(t, 0, count)
 }
