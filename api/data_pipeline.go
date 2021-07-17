@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -121,14 +122,15 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 
 // Submits a flow run request to prefect.
 func (d *DataPipelineRunner) submitFlowRunRequest(request routes.KeyedEnqueueRequestData) error {
-
+	// compose the run name
 	runName := fmt.Sprintf("%s:%s", request.ModelID, request.RunID)
-	flowParameters, err := json.Marshal(request)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal flow request params")
+
+	// prefect server expects JSON to be escaped and without newlines/tabs
+	buffer := bytes.Buffer{}
+	if err := json.Compact(&buffer, request.RequestData); err != nil {
+		return errors.Wrap(err, "failed to compact request JSON")
 	}
-	// prefect server expects JSON to be escaped
-	escaped := strings.ReplaceAll(string(flowParameters), `"`, `\"`)
+	escaped := strings.ReplaceAll(buffer.String(), `"`, `\"`)
 
 	// Define a task submission query
 	// ** NOTE: Using a GraphQL variable for the `parameters` field generates an error on the server,
