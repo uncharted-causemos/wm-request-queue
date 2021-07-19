@@ -85,9 +85,15 @@ func (r *ListFIFOQueue) Dequeue() interface{} {
 		r.cond.Wait()
 	}
 
+	// peek at the data
 	result := r.queue.Front()
 	value := result.Value.(*queuedItem)
+
+	// remove the item from the queue and the hash set if necessary
 	r.queue.Remove(result)
+	if r.hashes[value.key] {
+		delete(r.hashes, value.key)
+	}
 
 	return value.x
 }

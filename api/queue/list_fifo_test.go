@@ -64,6 +64,7 @@ func TestListBlockingDequeue(t *testing.T) {
 func TestHashedEnqueueDequeue(t *testing.T) {
 	queue := NewListFIFOQueue(2)
 
+	// ensure request with identical keys are only added once
 	result := queue.EnqueueHashed(1, 10)
 	assert.True(t, result)
 	result = queue.EnqueueHashed(1, 10)
@@ -73,6 +74,8 @@ func TestHashedEnqueueDequeue(t *testing.T) {
 	result = queue.EnqueueHashed(2, 20)
 	assert.True(t, result)
 
+	// ensure that dequeing requests will allow a follow on request
+	// with the same key to be added
 	dequeueResult := queue.Dequeue().(int)
 	assert.Equal(t, 10, dequeueResult)
 	dequeueResult = queue.Dequeue().(int)
@@ -80,4 +83,10 @@ func TestHashedEnqueueDequeue(t *testing.T) {
 
 	count = queue.Size()
 	assert.Equal(t, 0, count)
+
+	result = queue.EnqueueHashed(1, 10)
+	assert.True(t, result)
+
+	count = queue.Size()
+	assert.Equal(t, 1, count)
 }
