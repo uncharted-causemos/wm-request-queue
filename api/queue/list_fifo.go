@@ -10,6 +10,7 @@ type RequestQueue interface {
 	Enqueue(x interface{}) bool
 	EnqueueHashed(key int, x interface{}) bool
 	Dequeue() interface{}
+	Clear()
 	Size() int
 }
 
@@ -103,4 +104,12 @@ func (r *ListFIFOQueue) Size() int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return r.queue.Len()
+}
+
+// Clear clears the queue and request key hash map.
+func (r *ListFIFOQueue) Clear() {
+	r.mutex.Lock()
+	r.queue.Init()
+	r.hashes = map[int]bool{}
+	r.mutex.Unlock()
 }

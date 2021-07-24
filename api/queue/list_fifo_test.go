@@ -90,3 +90,13 @@ func TestHashedEnqueueDequeue(t *testing.T) {
 	count = queue.Size()
 	assert.Equal(t, 1, count)
 }
+
+func TestListClear(t *testing.T) {
+	queue := NewListFIFOQueue(2)
+	queue.Enqueue(10)
+	queue.Enqueue(20)
+	queue.Enqueue(30)
+	queue.Clear()
+	count := queue.Size()
+	assert.Equal(t, 0, count)
+}

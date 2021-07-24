@@ -8,12 +8,14 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 	api_middleware "gitlab.uncharted.software/WM/wm-request-queue/api/middleware"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/pipeline"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/queue"
 	"gitlab.uncharted.software/WM/wm-request-queue/api/routes"
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
 
 // NewRouter returns a chi router with endpoints registered.
-func NewRouter(cfg config.Config) (chi.Router, error) {
+func NewRouter(cfg config.Config, queue queue.RequestQueue, runner *pipeline.DataPipelineRunner) (chi.Router, error) {
 
 	// Setup the router and configure baseline middleware
 	r := chi.NewRouter()
@@ -35,8 +37,11 @@ func NewRouter(cfg config.Config) (chi.Router, error) {
 
 	r.Route("/data-pipeline", func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
-		r.Put("/enqueue", routes.EnqueueRequest(&cfg)) // PUT instead of POST due to idempotency
-		r.Get("/waiting", routes.Waiting(&cfg))
+		r.Put("/enqueue", routes.EnqueueRequest(&cfg, queue, runner)) // PUT instead of POST due to idempotency
+		r.Get("/waiting", routes.Waiting(&cfg, queue))
+		r.Put("/start", routes.StartRequest(&cfg, runner))
+		r.Put("/stop", routes.StopRequest(&cfg, runner))
+		r.Put("/clear", routes.ClearRequest(&cfg, queue))
 	})
 
 	return r, nil

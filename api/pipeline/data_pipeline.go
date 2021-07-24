@@ -1,4 +1,4 @@
-package api
+package pipeline
 
 import (
 	"bytes"
@@ -9,11 +9,12 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/machinebox/graphql"
 	"github.com/pkg/errors"
-	"gitlab.uncharted.software/WM/wm-request-queue/api/routes"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/queue"
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
 
@@ -21,34 +22,56 @@ import (
 type DataPipelineRunner struct {
 	config.Config
 	client *graphql.Client
-	done   chan bool
+	queue queue.RequestQueue
+	done chan bool
+	running bool
+	mutex *sync.RWMutex
 }
 
 // NewDataPipelineRunner creates a new instance of a data pipeline runner.
-func NewDataPipelineRunner(cfg *config.Config) *DataPipelineRunner {
+func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) *DataPipelineRunner {
+	// standard http client with our timeout
 	httpClient := &http.Client{Timeout: time.Second * time.Duration(cfg.Environment.DataPipelineTimeoutSec)}
+
+	// graphql client that uses our http  client - our timeout is applied transitively
 	graphQLClient := graphql.NewClient(cfg.Environment.DataPipelineAddr, graphql.WithHTTPClient(httpClient))
 
 	return &DataPipelineRunner{
 		Config: config.Config{
 			Logger:       cfg.Logger,
 			Environment:  cfg.Environment,
-			RequestQueue: cfg.RequestQueue,
 		},
+		queue: requestQueue,
 		client: graphQLClient,
 		done:   make(chan bool),
+		running: false,
+		mutex: &sync.RWMutex{},
 	}
 }
 
 // Start initiates request queue servicing.
 func (d *DataPipelineRunner) Start() {
+	d.mutex.RLock()
+	if d.running {
+		d.mutex.RUnlock()
+		return
+	}
+	d.mutex.RUnlock()
+
 	// Read from the queue until we get shut down.
 	go func() {
+		d.mutex.Lock()
+		d.running = true
+		d.mutex.Unlock()
+
 		for {
 			select {
 			case <-d.done:
 				// break out of the loop on shutdown
-				break
+				d.mutex.Lock()
+				d.running = false
+				d.mutex.Unlock()
+				return
 			default:
 				// Check to see if prefect is busy.  If not run the next flow request in the
 				// queue.
@@ -57,12 +80,12 @@ func (d *DataPipelineRunner) Start() {
 					d.Logger.Error(err)
 				} else {
 					activeFlowRuns := len(running.FlowRun)
-					if activeFlowRuns == 0 {
-						request, ok := d.Config.RequestQueue.Dequeue().(routes.KeyedEnqueueRequestData)
+					if activeFlowRuns == 0 && d.queue.Size() > 0 {
+						request, ok := d.queue.Dequeue().(KeyedEnqueueRequestData)
 						if !ok {
 							d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
 						}
-						if err := d.submitFlowRunRequest(request); err != nil {
+						if err := d.submitFlowRunRequest(&request); err != nil {
 							d.Logger.Error(err)
 						}
 
@@ -76,7 +99,11 @@ func (d *DataPipelineRunner) Start() {
 
 // Stop ends request servicing.
 func (d *DataPipelineRunner) Stop() {
-	d.done <- true
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	if d.running {
+		d.done <- true
+	}
 }
 
 // Status of prefect flow runs.
@@ -121,7 +148,7 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 }
 
 // Submits a flow run request to prefect.
-func (d *DataPipelineRunner) submitFlowRunRequest(request routes.KeyedEnqueueRequestData) error {
+func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestData) error {
 	// compose the run name
 	runName := fmt.Sprintf("%s:%s", request.ModelID, request.RunID)
 

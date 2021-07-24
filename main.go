@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"gitlab.uncharted.software/WM/wm-request-queue/api"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/pipeline"
 	"gitlab.uncharted.software/WM/wm-request-queue/api/queue"
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 	"go.uber.org/zap"
@@ -40,26 +41,28 @@ func main() {
 	}()
 	sugar := logger.Sugar()
 
+	config := config.Config{
+		Logger:       sugar,
+		Environment:  env,
+	}
+
 	// Setup the request queue
 	requestQueue := queue.NewListFIFOQueue(env.DataPipelineQueueSize)
 
+	// Setup the prefect mediator
+	dataPipelineRunner := pipeline.NewDataPipelineRunner(&config, requestQueue)
+
 	// Setup router
-	routerConfig := config.Config{
-		Logger:       sugar,
-		Environment:  env,
-		RequestQueue: requestQueue,
-	}
-	r, err := api.NewRouter(routerConfig)
+	r, err := api.NewRouter(config, requestQueue, dataPipelineRunner)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Setup the prefect mediator
-	dataPipelineRunner := api.NewDataPipelineRunner(&routerConfig)
-	dataPipelineRunner.Start()
-
 	// Log config
 	sugar.Info(env)
+
+	// Start listening for updates
+	dataPipelineRunner.Start()
 
 	// Start listening
 	sugar.Infof("Listening on %s", env.Addr)

@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/cors v1.2.0
 	github.com/go-chi/render v1.0.1
 	github.com/joho/godotenv v1.3.0
+	github.com/joncrlsn/dque v0.0.0-20200702023911-3e80e3146ce5
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/machinebox/graphql v0.2.2
 	github.com/matryer/is v1.4.0 // indirect

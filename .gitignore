@@ -1,2 +1,4 @@
 wm-request-queue
 .vscode
+api/queue/test_data
+__debug_bin

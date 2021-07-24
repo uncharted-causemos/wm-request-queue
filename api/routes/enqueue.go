@@ -6,33 +6,18 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/pipeline"
+	"gitlab.uncharted.software/WM/wm-request-queue/api/queue"
+	"gitlab.uncharted.software/WM/wm-request-queue/config"
 
 	"github.com/vova616/xxhash"
-	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
-
-// EnqueueRequestData defines the minimum fields upstream callers need to specify in order to run
-// a data pipeline job.  Additional parameters will not be validated and will be passed through
-// to prefect.
-type EnqueueRequestData struct {
-	ModelID      string   `json:"model_id"`
-	RunID        string   `json:"run_id"`
-	DataPaths    []string `json:"data_paths"`
-	RequestData []byte
-}
-
-// KeyedEnqueueRequestData adds an internally generated hash key to support checks for
-// duplicate requests.
-type KeyedEnqueueRequestData struct {
-	EnqueueRequestData
-	RequestKey int32
-}
 
 // EnqueueRequest adds a request to the queue if there is space, or returns an error if
 // the queue is currently at maximum capacity.
-func EnqueueRequest(cfg *config.Config) func(http.ResponseWriter, *http.Request) {
+func EnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var enqueueMsg EnqueueRequestData
+		var enqueueMsg pipeline.EnqueueRequestData
 
 		// Read the body into a byte array
 		body, err := ioutil.ReadAll(r.Body)
@@ -71,14 +56,14 @@ func EnqueueRequest(cfg *config.Config) func(http.ResponseWriter, *http.Request)
 		paramHash := xxhash.Checksum32(enqueueMsg.RequestData)
 
 		// Relevant info to run the request downstream
-		keyed := KeyedEnqueueRequestData{
+		keyed := pipeline.KeyedEnqueueRequestData{
 			EnqueueRequestData: enqueueMsg,
 			RequestKey:         int32(paramHash),
 		}
 
 		// Enqueue the request if there's room, otherwise let the caller know that the service
 		// is unavailable.
-		if !cfg.RequestQueue.EnqueueHashed(int(keyed.RequestKey), keyed) {
+		if !requestQueue.EnqueueHashed(int(keyed.RequestKey), keyed) {
 			handleErrorType(w, errors.New("request queue full"), http.StatusServiceUnavailable, cfg.Logger)
 			return
 		}
