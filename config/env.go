@@ -17,19 +17,19 @@ type Environment struct {
 	// Port to listen on
 	Addr string `default:":4040"`
 	// Prefect server address including port
-	DataPipelineAddr string `default:"http://localhost:4200"`
+	DataPipelineAddr string `default:"http://localhost:4200" split_words:"true"`
 	// Prefect server request timeout
-	DataPipelineTimeoutSec int `default:"10"`
+	DataPipelineTimeoutSec int `default:"10" split_words:"true"`
 	// Data pipeline queue request size
-	DataPipelineQueueSize int `default:"100"`
+	DataPipelineQueueSize int `default:"100" split_words:"true"`
 	// Prefect polling interaval
-	DataPipelinePollIntervalSec int `default:"5"`
+	DataPipelinePollIntervalSec int `default:"5" split_words:"true"`
 	// Flow version group ID for the baseline tile flow
-	DataPipelineTileFlowID string `default:"4d8d9239-2594-45af-9ec9-d24eafb1f1af"`
+	DataPipelineTileFlowID string `default:"4d8d9239-2594-45af-9ec9-d24eafb1f1af" split_words:"true"`
 	// Enable idempotency checks on prefect
-	DataPipelineIdempotencyChecks string `default:"all"`
+	DataPipelineIdempotencyChecks string `default:"all" split_words:"true"`
 	// Maximum number of flows to run in parallel
-	DataPipelineParallelism int `default:"1"`
+	DataPipelineParallelism int `default:"1" split_words:"true"`
 }
 
 const (
