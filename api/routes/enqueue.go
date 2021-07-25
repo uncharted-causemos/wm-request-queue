@@ -63,9 +63,16 @@ func EnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue, runner 
 
 		// Enqueue the request if there's room, otherwise let the caller know that the service
 		// is unavailable.
-		if !requestQueue.EnqueueHashed(int(keyed.RequestKey), keyed) {
-			handleErrorType(w, errors.New("request queue full"), http.StatusServiceUnavailable, cfg.Logger)
-			return
+		if config.UseQueueIdempotency(cfg.Environment.DataPipelineIdempotencyChecks) {
+			if !requestQueue.EnqueueHashed(int(keyed.RequestKey), keyed) {
+				handleErrorType(w, errors.New("request queue full"), http.StatusServiceUnavailable, cfg.Logger)
+				return
+			}
+		} else {
+			if !requestQueue.Enqueue(keyed) {
+				handleErrorType(w, errors.New("request queue full"), http.StatusServiceUnavailable, cfg.Logger)
+				return
+			}
 		}
 	}
 }

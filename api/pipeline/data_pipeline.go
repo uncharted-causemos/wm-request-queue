@@ -183,7 +183,7 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 	// set the key to use for prefect's idempotency checks - if a pipeline is run to completion,
 	// SUCESSFULLY or UNSUCESSFULLY, an attempt to re-run with the same key will result in it being
 	// skipped.
-	if d.Config.Environment.DataPipelineIdempotencyChecks {
+	if config.UsePrefectIdempotency(d.Environment.DataPipelineIdempotencyChecks) {
 		idempotencyKey := strconv.FormatUint(uint64(request.RequestKey), 16)
 		mutation.Var("key", idempotencyKey)
 	}
