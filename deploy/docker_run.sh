@@ -4,7 +4,7 @@ source ./config.sh
 
 docker run \
    -e WM_MODE="prod" \
-   -e WM_DATAPIPELINEADDR="http://10.65.18.52:4200" \
+   -e WM_DATA_PIPELINE_ADDR="http://10.65.18.52:4200" \
    --name wm-request-queue \
    --rm \
    -p 4040:4040 \
