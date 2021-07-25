@@ -80,7 +80,7 @@ func (d *DataPipelineRunner) Start() {
 					d.Logger.Error(err)
 				} else {
 					activeFlowRuns := len(running.FlowRun)
-					if activeFlowRuns == 0 && d.queue.Size() > 0 {
+					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism && d.queue.Size() > 0 {
 						request, ok := d.queue.Dequeue().(KeyedEnqueueRequestData)
 						if !ok {
 							d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))

@@ -28,6 +28,8 @@ type Environment struct {
 	DataPipelineTileFlowID string `default:"4d8d9239-2594-45af-9ec9-d24eafb1f1af"`
 	// Enable idempotency checks on prefect
 	DataPipelineIdempotencyChecks string `default:"all"`
+	// Maximum number of flows to run in parallel
+	DataPipelineParallelism int `default:"1"`
 }
 
 const (
