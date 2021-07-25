@@ -106,6 +106,8 @@ func (d *DataPipelineRunner) Stop() {
 	}
 }
 
+// Running indicates whether or not the pipeline runner routine has been stopped,
+// or is currently running.
 func (d *DataPipelineRunner) Running() bool {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()

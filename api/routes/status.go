@@ -9,13 +9,14 @@ import (
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
 
-// WaitingResponse provides the number of jobs waiting in the queue
+// StatusResponse provides the number of items currently queued, and whether or not the
+// the pipeline runner routine has been stopped, or is running.
 type StatusResponse struct {
 	Count int `json:"count"`
 	Running bool `json:"running"`
 }
 
-// Waiting creates a get request handler that will return the number of items currently waiting in the queue
+// StatusRequest creates a get request handler that will return status info for the request queue and pipeline runner.
 func StatusRequest(cfg *config.Config, queue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		count := queue.Size()
