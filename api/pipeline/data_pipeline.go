@@ -106,6 +106,12 @@ func (d *DataPipelineRunner) Stop() {
 	}
 }
 
+func (d *DataPipelineRunner) Running() bool {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return d.running
+}
+
 // Status of prefect flow runs.
 type activeFlowRuns struct {
 	FlowRun []struct {
