@@ -2,21 +2,23 @@ package queue
 
 import (
 	"container/list"
+	"errors"
 	"sync"
 )
 
 // RequestQueue defines an interface for a request queue that supports enqueuing and dequeuing operations.
 type RequestQueue interface {
-	Enqueue(x interface{}) bool
-	EnqueueHashed(key int, x interface{}) bool
-	Dequeue() interface{}
-	Clear()
+	Enqueue(x interface{}) (bool, error)
+	EnqueueHashed(key int, x interface{}) (bool, error)
+	Dequeue() (interface{}, error)
+	Clear() error
+	Close() error
 	Size() int
 }
 
 type queuedItem struct {
-	key int
-	x   interface{}
+	Key int
+	Value   interface{}
 }
 
 // ListFIFOQueue is a FIFO queue implementation based on a doubly linked list.
@@ -24,6 +26,7 @@ type ListFIFOQueue struct {
 	queue  *list.List
 	hashes map[int]bool
 	size   int
+	closed bool
 	mutex  *sync.RWMutex
 	cond   *sync.Cond
 }
@@ -37,6 +40,7 @@ func NewListFIFOQueue(size int) RequestQueue {
 		queue:  list.New(),
 		hashes: map[int]bool{},
 		size:   size,
+		closed: false,
 		mutex:  mutex,
 		cond:   sync.NewCond(mutex),
 	}
@@ -46,40 +50,54 @@ func NewListFIFOQueue(size int) RequestQueue {
 
 // Enqueue adds a new item to the queue.  If the queue is full, the item will not
 // be added, and the function will return `false`.
-func (r *ListFIFOQueue) Enqueue(x interface{}) bool {
+func (r *ListFIFOQueue) Enqueue(x interface{}) (bool, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	if r.closed {
+		return false, errors.New("no enqueue after close")
+	}
+
 	if r.queue.Len() < r.size {
 		// add data
-		r.queue.PushBack(&queuedItem{x: x})
+		r.queue.PushBack(&queuedItem{Value: x})
 		r.cond.Signal()
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 // EnqueueHashed adds a new item to the queue if an item with a similar hash doesn't already exist.
 // If the queue is full, the item will not be added, and the function will return `false`.  If an
-func (r *ListFIFOQueue) EnqueueHashed(key int, x interface{}) bool {
+func (r *ListFIFOQueue) EnqueueHashed(key int, x interface{}) (bool, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	if r.queue.Len() < r.size {
-		if !r.hashes[key] {
-			r.queue.PushBack(&queuedItem{x: x, key: key})
+
+	if r.closed {
+		return false, errors.New("no enqueue after close")
+	}
+
+	if !r.hashes[key] {
+		if r.queue.Len() < r.size {
+			r.queue.PushBack(&queuedItem{Value: x, Key: key})
 			r.hashes[key] = true
 			// signal that there's data available
 			r.cond.Signal()
+			return true, nil
 		}
-		return true
+		return false, nil
 	}
-	return false
+	return true, nil
 }
 
 // Dequeue removes an item from the queue.  If the queue is empty, the operation blocks.
-func (r *ListFIFOQueue) Dequeue() interface{} {
+func (r *ListFIFOQueue) Dequeue() (interface{}, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+
+	if r.closed {
+		return false, errors.New("no dequeue after close")
+	}
 
 	// wait until there's data
 	for r.queue.Len() == 0 {
@@ -92,11 +110,11 @@ func (r *ListFIFOQueue) Dequeue() interface{} {
 
 	// remove the item from the queue and the hash set if necessary
 	r.queue.Remove(result)
-	if r.hashes[value.key] {
-		delete(r.hashes, value.key)
+	if r.hashes[value.Key] {
+		delete(r.hashes, value.Key)
 	}
 
-	return value.x
+	return value.Value, nil
 }
 
 // Size returns the curent size of the queue.
@@ -107,9 +125,29 @@ func (r *ListFIFOQueue) Size() int {
 }
 
 // Clear clears the queue and request key hash map.
-func (r *ListFIFOQueue) Clear() {
+func (r *ListFIFOQueue) Clear() error{
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if r.closed {
+		return errors.New("no queue clear after close")
+	}
+
 	r.queue.Init()
 	r.hashes = map[int]bool{}
-	r.mutex.Unlock()
+
+	return nil
+}
+
+// Close closes the queue forbidding further operations.
+func (r *ListFIFOQueue) Close() error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if r.closed {
+		return errors.New("no close of previously closed queue")
+	}
+
+	r.closed = true
+	return nil
 }

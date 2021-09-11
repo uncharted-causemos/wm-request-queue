@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,12 @@ import (
 )
 
 const envFile = "wm.env"
+
+var (
+	// populated at compile time based on data injected by the makefile
+	version   = "unset"
+	timestamp = "unset"
+)
 
 func main() {
 	// Load environment
@@ -42,12 +49,32 @@ func main() {
 	sugar := logger.Sugar()
 
 	config := config.Config{
-		Logger:       sugar,
-		Environment:  env,
+		Logger:      sugar,
+		Environment: env,
 	}
 
+	// Log version
+	sugar.Infof("Version: %s Timestamp: %s", version, timestamp)
+
+	// Log config
+	sugar.Info(env)
+
 	// Setup the request queue
-	requestQueue := queue.NewListFIFOQueue(env.DataPipelineQueueSize)
+	var requestQueue queue.RequestQueue
+	if env.DataPipelinePersistedQueue {
+		// The gob package that the persisted queue uses for storing data requires a one-time registration
+		// of any structures that it stores.  TODO: Could be added to the params of the New call below.
+		gob.Register(pipeline.EnqueueRequestData{})
+		gob.Register(pipeline.KeyedEnqueueRequestData{})
+		requestQueue, err = queue.NewPersistedFIFOQueue(env.DataPipelineQueueSize, env.DataPipelineQueueDir, env.DataPipelineQueueName)
+		sugar.Infof("Loaded queue with %d entries from %s%s", requestQueue.Size(), env.DataPipelineQueueDir, env.DataPipelineQueueName)
+		if err != nil {
+			sugar.Fatal(err)
+		}
+	} else {
+		// in-memory queue, data does not survive a restart
+		requestQueue = queue.NewListFIFOQueue(env.DataPipelineQueueSize)
+	}
 
 	// Setup the prefect mediator
 	dataPipelineRunner := pipeline.NewDataPipelineRunner(&config, requestQueue)
@@ -55,11 +82,8 @@ func main() {
 	// Setup router
 	r, err := api.NewRouter(config, requestQueue, dataPipelineRunner)
 	if err != nil {
-		log.Fatal(err)
+		sugar.Fatal(err)
 	}
-
-	// Log config
-	sugar.Info(env)
 
 	// Start listening for updates
 	dataPipelineRunner.Start()

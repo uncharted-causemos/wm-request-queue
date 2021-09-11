@@ -30,6 +30,12 @@ type Environment struct {
 	DataPipelineIdempotencyChecks string `default:"all" split_words:"true"`
 	// Maximum number of flows to run in parallel
 	DataPipelineParallelism int `default:"1" split_words:"true"`
+	// Use persisted queue or default (memory only) queue.
+	DataPipelinePersistedQueue bool `default:"true" split_workds:"true"`
+	// Directory to store the queue data in when persisted queue is used.
+	DataPipelineQueueDir string `default:"./" split_words:"true"`
+	// Name of queue when persisted queue is used.
+	DataPipelineQueueName string `default:"request_queue" split_words:"true"`
 }
 
 const (
