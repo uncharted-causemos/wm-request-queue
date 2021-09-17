@@ -16,12 +16,15 @@ stages:
   image: docker-hub.uncharted.software/golang:1.16
   variables:
     GOPROXY: direct
+    # GOPRIVATE: gitlab.uncharted.software
   cache:
     paths:
       - vendor/
   before_script:
     # Gitlab reads following login information from ~/.netrc file
     - echo "machine gitlab.uncharted.software login ${GITLAB_LOGIN} password ${GITLAB_TOKEN}" > ~/.netrc
+    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.uncharted.software/".insteadOf https://gitlab.uncharted.software/
+    - go env -w GOPRIVATE=gitlab.uncharted.software/${CI_PROJECT_NAMESPACE}
     - go get -u golang.org/x/lint/golint
     - go mod vendor
 
