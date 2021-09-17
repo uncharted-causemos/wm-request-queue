@@ -200,7 +200,7 @@ type testObject struct {
 	Value int
 }
 
-func TestPersistedInerfaceEnqueue(t *testing.T) {
+func TestPersistedInterfaceEnqueue(t *testing.T) {
 
 	gob.Register(testObject{})
 

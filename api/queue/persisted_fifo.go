@@ -53,6 +53,11 @@ func NewPersistedFIFOQueue(size int, queueDir string, queueName string) (Request
 	var queue *dque.DQue
 	if _, err := os.Stat(queuePath); err != nil {
 		if os.IsNotExist(err) {
+			err = os.MkdirAll(queueDir, os.ModePerm)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to create request queue dir %s", queueDir)
+			}
+
 			queue, err = dque.New(queueName, queueDir, queueSegmenSize, queuedItemBuilder)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to initialize request queue %s/%s", queueDir, queueName)
