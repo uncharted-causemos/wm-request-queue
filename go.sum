@@ -35,11 +35,11 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+github.com/uncharted-causemos/dque v0.0.0-20210920193637-0819861e0649 h1:NkhvFb5PcmUZKLp7WPLh5OBByGJkMt6N577P6KzaSzw=
+github.com/uncharted-causemos/dque v0.0.0-20210920193637-0819861e0649/go.mod h1:7Zuyit5+1tkUgh9I/IhysfDJ7IuduGsh8BwXYXJTNhA=
 github.com/vova616/xxhash v0.0.0-20191210231457-381b6b669083 h1:dzAhOqkaXuTEbNC5GDEv2+6fTYK6Dpu4LxDAs8jCRS8=
 github.com/vova616/xxhash v0.0.0-20191210231457-381b6b669083/go.mod h1:E/Q5UxH/qEZkOl5P6vKXtsJsQL2b96TF4eKuTbRhpmk=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-gitlab.uncharted.software/WM/dque v0.0.0-20210911175218-b8385af8e2e4 h1:HphH+4qtezDYK/xus7baWMRaXe8n7DdNuqkUbTU0wJk=
-gitlab.uncharted.software/WM/dque v0.0.0-20210911175218-b8385af8e2e4/go.mod h1:yUNBjosczWWfKdmndq33LpklYbiDxxa9RFmH7dQLQRY=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/atomic v1.8.0 h1:CUhrE4N1rqSE6FM9ecihEjRkLQu8cDfgDyoOs83mEY4=
 go.uber.org/atomic v1.8.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=

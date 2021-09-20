@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"gitlab.uncharted.software/WM/dque"
+	"github.com/uncharted-causemos/dque"
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
 

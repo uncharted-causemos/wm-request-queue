@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/vova616/xxhash v0.0.0-20191210231457-381b6b669083
-	gitlab.uncharted.software/WM/dque v0.0.0-20210911175218-b8385af8e2e4
+	github.com/uncharted-causemos/dque v0.0.0-20210920193637-0819861e0649
 	go.uber.org/atomic v1.8.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
