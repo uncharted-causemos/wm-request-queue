@@ -36,6 +36,11 @@ type Environment struct {
 	DataPipelineQueueDir string `default:"./" split_words:"true"`
 	// Name of queue when persisted queue is used.
 	DataPipelineQueueName string `default:"request_queue" split_words:"true"`
+	// The time to pause sending jobs to prefect
+	// old dates will cause time configuration to be ignored
+	PauseTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
+	// The time to resume sending jobs to prefect
+	ResumeTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
 }
 
 const (

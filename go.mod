@@ -12,11 +12,12 @@ require (
 	github.com/matryer/is v1.4.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
-	github.com/vova616/xxhash v0.0.0-20191210231457-381b6b669083
 	github.com/uncharted-causemos/dque v0.0.0-20210920193637-0819861e0649
+	github.com/vova616/xxhash v0.0.0-20191210231457-381b6b669083
 	go.uber.org/atomic v1.8.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
-	golang.org/x/tools v0.0.0-20201013201025-64a9e34f3752 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/tools v0.1.6 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
