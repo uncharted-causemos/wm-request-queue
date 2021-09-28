@@ -21,11 +21,11 @@ import (
 // DataPipelineRunner services the request queue
 type DataPipelineRunner struct {
 	config.Config
-	client *graphql.Client
-	queue queue.RequestQueue
-	done chan bool
+	client  *graphql.Client
+	queue   queue.RequestQueue
+	done    chan bool
 	running bool
-	mutex *sync.RWMutex
+	mutex   *sync.RWMutex
 }
 
 // NewDataPipelineRunner creates a new instance of a data pipeline runner.
@@ -38,14 +38,14 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 
 	return &DataPipelineRunner{
 		Config: config.Config{
-			Logger:       cfg.Logger,
-			Environment:  cfg.Environment,
+			Logger:      cfg.Logger,
+			Environment: cfg.Environment,
 		},
-		queue: requestQueue,
-		client: graphQLClient,
-		done:   make(chan bool),
+		queue:   requestQueue,
+		client:  graphQLClient,
+		done:    make(chan bool),
 		running: false,
-		mutex: &sync.RWMutex{},
+		mutex:   &sync.RWMutex{},
 	}
 }
 
@@ -80,7 +80,14 @@ func (d *DataPipelineRunner) Start() {
 					d.Logger.Error(err)
 				} else {
 					activeFlowRuns := len(running.FlowRun)
-					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism && d.queue.Size() > 0 {
+					sameFlowRuns := 0
+					// Only consider active flows of the same version_group_id for busyness
+					for i := 0; i < activeFlowRuns; i++ {
+						if running.FlowRun[i].Flow.VersionGroupID == d.Config.Environment.DataPipelineTileFlowID {
+							sameFlowRuns++
+						}
+					}
+					if sameFlowRuns < d.Config.Environment.DataPipelineParallelism && d.queue.Size() > 0 {
 						data, err := d.queue.Dequeue()
 						if err != nil {
 							d.Logger.Error(err)
@@ -124,8 +131,9 @@ type activeFlowRuns struct {
 		ID    string
 		State string
 		Flow  struct {
-			ID   string
-			Name string
+			ID             string
+			Name           string
+			VersionGroupID string `json:"version_group_id"`
 		}
 	} `json:"flow_run"`
 }
@@ -146,6 +154,7 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 			  flow {
 				id
 				name
+				version_group_id
 			  }
 			}
 		  }`,
