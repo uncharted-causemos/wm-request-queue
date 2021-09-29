@@ -90,6 +90,7 @@ func (d *DataPipelineRunner) Start() {
 	}()
 }
 
+// Submits the next item in the queue
 func (d *DataPipelineRunner) Submit() {
 	data, err := d.queue.Dequeue()
 	if err != nil {
