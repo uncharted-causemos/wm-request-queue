@@ -80,7 +80,7 @@ func (d *DataPipelineRunner) Start() {
 					d.Logger.Error(err)
 				} else {
 					activeFlowRuns := len(running.FlowRun)
-					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism && d.queue.Size() > 0 {
+					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
 						d.Submit()
 					}
 				}
@@ -92,6 +92,9 @@ func (d *DataPipelineRunner) Start() {
 
 // Submit submits the next item in the queue
 func (d *DataPipelineRunner) Submit() {
+	if d.queue.Size() == 0 {
+		return
+	}
 	data, err := d.queue.Dequeue()
 	if err != nil {
 		d.Logger.Error(err)

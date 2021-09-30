@@ -42,7 +42,7 @@ func NewRouter(cfg config.Config, queue queue.RequestQueue, runner *pipeline.Dat
 		r.Put("/start", routes.StartRequest(&cfg, runner))
 		r.Put("/stop", routes.StopRequest(&cfg, runner))
 		r.Put("/clear", routes.ClearRequest(&cfg, queue))
-		r.Post("/force-flow", routes.ForceDispatchRequest(&cfg, queue, runner))
+		r.Put("/force-flow", routes.ForceDispatchRequest(&cfg, queue, runner))
 	})
 
 	return r, nil
