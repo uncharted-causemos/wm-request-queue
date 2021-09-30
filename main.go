@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"gitlab.uncharted.software/WM/wm-request-queue/api"
 	"gitlab.uncharted.software/WM/wm-request-queue/api/pipeline"
@@ -88,7 +89,43 @@ func main() {
 	// Start listening for updates
 	dataPipelineRunner.Start()
 
+	currentTime := time.Now()
+	pauseTime, err := time.Parse(time.RFC3339, env.PauseTime)
+	if err != nil {
+		sugar.Fatal(err)
+	}
+	// ignores time configuration if given pause time date is before when code is ran
+	if currentTime.Before(pauseTime) {
+		sugar.Info("Datapipeline pause time: %s", pauseTime)
+		go pauseAndResume(&pauseTime, dataPipelineRunner.Stop, sugar)
+
+		resumeTime, err := time.Parse(time.RFC3339, env.ResumeTime)
+		if err != nil {
+			sugar.Fatal(err)
+		}
+		sugar.Info("Datapipeline resume time: %s", resumeTime)
+		go pauseAndResume(&resumeTime, dataPipelineRunner.Start, sugar)
+	}
+
 	// Start listening
 	sugar.Infof("Listening on %s", env.Addr)
 	sugar.Fatal(http.ListenAndServe(env.Addr, r))
+
+}
+
+func pauseAndResume(triggerTime *time.Time, dataPipelineOperation func(), sugar *zap.SugaredLogger) {
+	currentTime := time.Now()
+	resumeHour := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), triggerTime.Hour(), triggerTime.Minute(), triggerTime.Second(), 0, triggerTime.Location())
+	difference := resumeHour.Sub(currentTime)
+
+	if difference < 0 {
+		resumeHour = resumeHour.Add(24 * time.Hour)
+		difference = resumeHour.Sub(currentTime)
+	}
+	for {
+		time.Sleep(difference)
+		difference = 24 * time.Hour
+		dataPipelineOperation()
+
+	}
 }
