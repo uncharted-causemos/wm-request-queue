@@ -113,9 +113,9 @@ func main() {
 
 }
 
-func pauseAndResume(resumeTime *time.Time, dataPipelineOperation func(), sugar *zap.SugaredLogger) {
+func pauseAndResume(triggerTime *time.Time, dataPipelineOperation func(), sugar *zap.SugaredLogger) {
 	currentTime := time.Now()
-	resumeHour := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), resumeTime.Hour(), resumeTime.Minute(), resumeTime.Second(), 0, resumeTime.Location())
+	resumeHour := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), triggerTime.Hour(), triggerTime.Minute(), triggerTime.Second(), 0, triggerTime.Location())
 	difference := resumeHour.Sub(currentTime)
 
 	if difference < 0 {
