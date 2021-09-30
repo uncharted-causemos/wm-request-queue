@@ -21,11 +21,11 @@ import (
 // DataPipelineRunner services the request queue
 type DataPipelineRunner struct {
 	config.Config
-	client *graphql.Client
-	queue queue.RequestQueue
-	done chan bool
+	client  *graphql.Client
+	queue   queue.RequestQueue
+	done    chan bool
 	running bool
-	mutex *sync.RWMutex
+	mutex   *sync.RWMutex
 }
 
 // NewDataPipelineRunner creates a new instance of a data pipeline runner.
@@ -38,14 +38,14 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 
 	return &DataPipelineRunner{
 		Config: config.Config{
-			Logger:       cfg.Logger,
-			Environment:  cfg.Environment,
+			Logger:      cfg.Logger,
+			Environment: cfg.Environment,
 		},
-		queue: requestQueue,
-		client: graphQLClient,
-		done:   make(chan bool),
+		queue:   requestQueue,
+		client:  graphQLClient,
+		done:    make(chan bool),
 		running: false,
-		mutex: &sync.RWMutex{},
+		mutex:   &sync.RWMutex{},
 	}
 }
 
@@ -80,25 +80,32 @@ func (d *DataPipelineRunner) Start() {
 					d.Logger.Error(err)
 				} else {
 					activeFlowRuns := len(running.FlowRun)
-					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism && d.queue.Size() > 0 {
-						data, err := d.queue.Dequeue()
-						if err != nil {
-							d.Logger.Error(err)
-						}
-						request, ok := data.(KeyedEnqueueRequestData)
-						if !ok {
-							d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
-						}
-						if err := d.submitFlowRunRequest(&request); err != nil {
-							d.Logger.Error(err)
-						}
-
+					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
+						d.Submit()
 					}
 				}
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
 			}
 		}
 	}()
+}
+
+// Submit submits the next item in the queue
+func (d *DataPipelineRunner) Submit() {
+	if d.queue.Size() == 0 {
+		return
+	}
+	data, err := d.queue.Dequeue()
+	if err != nil {
+		d.Logger.Error(err)
+	}
+	request, ok := data.(KeyedEnqueueRequestData)
+	if !ok {
+		d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
+	}
+	if err := d.submitFlowRunRequest(&request); err != nil {
+		d.Logger.Error(err)
+	}
 }
 
 // Stop ends request servicing.
