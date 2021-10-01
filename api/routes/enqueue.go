@@ -15,7 +15,7 @@ import (
 
 // EnqueueRequest adds a request to the queue if there is space, or returns an error if
 // the queue is currently at maximum capacity.
-func EnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
+func EnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var enqueueMsg pipeline.EnqueueRequestData
 

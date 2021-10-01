@@ -80,32 +80,32 @@ func (d *DataPipelineRunner) Start() {
 					d.Logger.Error(err)
 				} else {
 					activeFlowRuns := len(running.FlowRun)
-					sameFlowRuns := 0
-					// Only consider active flows of the same version_group_id for busyness
-					for i := 0; i < activeFlowRuns; i++ {
-						if running.FlowRun[i].Flow.VersionGroupID == d.Config.Environment.DataPipelineTileFlowID {
-							sameFlowRuns++
-						}
-					}
-					if sameFlowRuns < d.Config.Environment.DataPipelineParallelism && d.queue.Size() > 0 {
-						data, err := d.queue.Dequeue()
-						if err != nil {
-							d.Logger.Error(err)
-						}
-						request, ok := data.(KeyedEnqueueRequestData)
-						if !ok {
-							d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
-						}
-						if err := d.submitFlowRunRequest(&request); err != nil {
-							d.Logger.Error(err)
-						}
-
+					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
+						d.Submit()
 					}
 				}
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
 			}
 		}
 	}()
+}
+
+// Submit submits the next item in the queue
+func (d *DataPipelineRunner) Submit() {
+	if d.queue.Size() == 0 {
+		return
+	}
+	data, err := d.queue.Dequeue()
+	if err != nil {
+		d.Logger.Error(err)
+	}
+	request, ok := data.(KeyedEnqueueRequestData)
+	if !ok {
+		d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
+	}
+	if err := d.submitFlowRunRequest(&request); err != nil {
+		d.Logger.Error(err)
+	}
 }
 
 // Stop ends request servicing.
@@ -143,10 +143,15 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 	query := graphql.NewRequest(
 		`query {
 			flow_run(where: {
-			  _or: [
-				{state: {_eq: "Submitted"}}
-				{state: {_eq: "Scheduled"}}
-				{state: {_eq: "Running"}}
+			  _and: [{
+				_or: [
+					{state: {_eq: "Submitted"}}
+					{state: {_eq: "Scheduled"}}
+					{state: {_eq: "Running"}}
+				]
+			  }, {
+				  flow: {version_group_id: {_eq: "` + d.Config.Environment.DataPipelineTileFlowID + `"}}
+			  }
 			  ]
 			}) {
 			  id
