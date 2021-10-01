@@ -131,8 +131,9 @@ type activeFlowRuns struct {
 		ID    string
 		State string
 		Flow  struct {
-			ID   string
-			Name string
+			ID             string
+			Name           string
+			VersionGroupID string `json:"version_group_id"`
 		}
 	} `json:"flow_run"`
 }
@@ -142,10 +143,15 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 	query := graphql.NewRequest(
 		`query {
 			flow_run(where: {
-			  _or: [
-				{state: {_eq: "Submitted"}}
-				{state: {_eq: "Scheduled"}}
-				{state: {_eq: "Running"}}
+			  _and: [{
+				_or: [
+					{state: {_eq: "Submitted"}}
+					{state: {_eq: "Scheduled"}}
+					{state: {_eq: "Running"}}
+				]
+			  }, {
+				  flow: {version_group_id: {_eq: "` + d.Config.Environment.DataPipelineTileFlowID + `"}}
+			  }
 			  ]
 			}) {
 			  id
@@ -153,6 +159,7 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 			  flow {
 				id
 				name
+				version_group_id
 			  }
 			}
 		  }`,
