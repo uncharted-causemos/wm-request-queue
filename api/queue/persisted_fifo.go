@@ -168,3 +168,32 @@ func (r *PersistedFIFOQueue) Clear() error {
 func (r *PersistedFIFOQueue) Close() error {
 	return errors.Wrap(r.queue.Close(), "failed to close queue")
 }
+
+type QueueContents struct {
+	Jobs  []queuedItem
+	Index int
+}
+
+func (q *QueueContents) Apply(entry interface{}) error {
+	request, ok := entry.(*queuedItem)
+	if !ok {
+		return errors.Errorf("unexpected type %s", reflect.TypeOf(entry))
+	}
+	q.Jobs[q.Index] = *request
+	q.Index++
+
+	return nil
+}
+
+// GetAll retrieves all of the contents in the queue
+func (r *PersistedFIFOQueue) GetAll() ([]queuedItem, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	queueContents := QueueContents{Jobs: make([]queuedItem, r.queue.Size()), Index: 0}
+	err := r.queue.ApplyToQueue(&queueContents)
+	if err != nil {
+		return nil, err
+	}
+	return queueContents.Jobs, nil
+}

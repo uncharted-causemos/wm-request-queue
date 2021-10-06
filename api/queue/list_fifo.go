@@ -2,8 +2,10 @@ package queue
 
 import (
 	"container/list"
-	"errors"
+	"reflect"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 // RequestQueue defines an interface for a request queue that supports enqueuing and dequeuing operations.
@@ -14,11 +16,12 @@ type RequestQueue interface {
 	Clear() error
 	Close() error
 	Size() int
+	GetAll() ([]queuedItem, error)
 }
 
 type queuedItem struct {
-	Key int
-	Value   interface{}
+	Key   int
+	Value interface{}
 }
 
 // ListFIFOQueue is a FIFO queue implementation based on a doubly linked list.
@@ -125,7 +128,7 @@ func (r *ListFIFOQueue) Size() int {
 }
 
 // Clear clears the queue and request key hash map.
-func (r *ListFIFOQueue) Clear() error{
+func (r *ListFIFOQueue) Clear() error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -150,4 +153,24 @@ func (r *ListFIFOQueue) Close() error {
 
 	r.closed = true
 	return nil
+}
+
+// GetAll retrieves all the contents in the queue
+func (r *ListFIFOQueue) GetAll() ([]queuedItem, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	listCopy := make([]queuedItem, r.queue.Len())
+	current := r.queue.Front()
+	i := 0
+	for current != nil {
+		item, ok := current.Value.(*queuedItem)
+		listCopy[i] = *item
+		if !ok {
+			return nil, errors.Errorf("unexpected type %s", reflect.TypeOf(item))
+		}
+		i++
+		current = current.Next()
+	}
+	return listCopy, nil
 }
