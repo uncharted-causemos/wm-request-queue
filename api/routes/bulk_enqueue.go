@@ -13,8 +13,8 @@ import (
 	"github.com/vova616/xxhash"
 )
 
-// EnqueueRequest adds a request to the queue if there is space, or returns an error if
-// the queue is currently at maximum capacity.
+// BulkEnqueueRequest adds a list of requests to the queue if there is space, or returns an error if
+// the queue is currently at maximum capacity. Will add until reaching capacity.
 func BulkEnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var enqueueMsg []pipeline.EnqueueRequestData
