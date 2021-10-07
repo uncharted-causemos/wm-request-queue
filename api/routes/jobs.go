@@ -19,7 +19,7 @@ func JobsRequest(cfg *config.Config, queue queue.RequestQueue) func(http.Respons
 		}
 		jobData := make([]pipeline.EnqueueRequestData, len(queueContents))
 		for i := 0; i < len(queueContents); i++ {
-			request, ok := queueContents[i].Value.(pipeline.KeyedEnqueueRequestData)
+			request, ok := queueContents[i].(pipeline.KeyedEnqueueRequestData)
 			jobData[i] = request.EnqueueRequestData
 			if !ok {
 				handleErrorType(w, errors.New("failed to generate response, unexpected datatype found"), http.StatusBadRequest, cfg.Logger)

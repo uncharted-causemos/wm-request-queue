@@ -16,7 +16,7 @@ type RequestQueue interface {
 	Clear() error
 	Close() error
 	Size() int
-	GetAll() ([]queuedItem, error)
+	GetAll() ([]interface{}, error)
 }
 
 type queuedItem struct {
@@ -156,19 +156,19 @@ func (r *ListFIFOQueue) Close() error {
 }
 
 // GetAll retrieves all the contents in the queue
-func (r *ListFIFOQueue) GetAll() ([]queuedItem, error) {
+func (r *ListFIFOQueue) GetAll() ([]interface{}, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	listCopy := make([]queuedItem, r.queue.Len())
+	listCopy := make([]interface{}, r.queue.Len())
 	current := r.queue.Front()
 	i := 0
 	for current != nil {
 		item, ok := current.Value.(*queuedItem)
-		listCopy[i] = *item
 		if !ok {
 			return nil, errors.Errorf("unexpected type %s", reflect.TypeOf(item))
 		}
+		listCopy[i] = item.Value
 		i++
 		current = current.Next()
 	}
