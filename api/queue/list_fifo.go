@@ -2,10 +2,8 @@ package queue
 
 import (
 	"container/list"
-	"reflect"
+	"errors"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // RequestQueue defines an interface for a request queue that supports enqueuing and dequeuing operations.
@@ -166,7 +164,7 @@ func (r *ListFIFOQueue) GetAll() ([]interface{}, error) {
 	for current != nil {
 		item, ok := current.Value.(*queuedItem)
 		if !ok {
-			return nil, errors.Errorf("unexpected type %s", reflect.TypeOf(item))
+			return nil, errors.New("unexpected type in queue")
 		}
 		listCopy[i] = item.Value
 		i++
