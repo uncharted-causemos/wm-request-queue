@@ -9,6 +9,7 @@ import (
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
 
+// CheckEnqueueParams checks if a job has all required information
 func CheckEnqueueParams(enqueueMsg pipeline.EnqueueRequestData) error {
 
 	// Make sure we've got valid data for the minimum field set
@@ -31,6 +32,7 @@ func CheckEnqueueParams(enqueueMsg pipeline.EnqueueRequestData) error {
 	return nil
 }
 
+// AddToQueue takes a given job and adds it to the queue
 func AddToQueue(enqueueMsg pipeline.EnqueueRequestData, cfg config.Config, requestQueue queue.RequestQueue) (bool, error) {
 	// Create a hash from the request data
 	paramHash := xxhash.Checksum32(enqueueMsg.RequestData)
