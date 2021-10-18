@@ -81,7 +81,7 @@ func (d *DataPipelineRunner) Start() {
 				} else {
 					activeFlowRuns := len(running.FlowRun)
 					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
-						d.Submit()
+						flowId := d.Submit()
 					}
 				}
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
@@ -91,9 +91,9 @@ func (d *DataPipelineRunner) Start() {
 }
 
 // Submit submits the next item in the queue
-func (d *DataPipelineRunner) Submit() {
+func (d *DataPipelineRunner) Submit() string {
 	if d.queue.Size() == 0 {
-		return
+		return ""
 	}
 	data, err := d.queue.Dequeue()
 	if err != nil {
@@ -103,9 +103,12 @@ func (d *DataPipelineRunner) Submit() {
 	if !ok {
 		d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
 	}
-	if err := d.submitFlowRunRequest(&request); err != nil {
+	flowId, err := d.submitFlowRunRequest(&request)
+
+	if err != nil {
 		d.Logger.Error(err)
 	}
+	return flowId
 }
 
 // Stop ends request servicing.
@@ -173,15 +176,21 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 	return &respData, nil
 }
 
+type flowSubmissionResponse struct {
+	CreateFlowRun struct {
+		ID string
+	} `json:"create_flow_run"`
+}
+
 // Submits a flow run request to prefect.
-func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestData) error {
+func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestData) (string, error) {
 	// compose the run name
 	runName := fmt.Sprintf("%s:%s", request.ModelID, request.RunID)
 
 	// prefect server expects JSON to be escaped and without newlines/tabs
 	buffer := bytes.Buffer{}
 	if err := json.Compact(&buffer, request.RequestData); err != nil {
-		return errors.Wrap(err, "failed to compact request JSON")
+		return "", errors.Wrap(err, "failed to compact request JSON")
 	}
 	escaped := strings.ReplaceAll(buffer.String(), `"`, `\"`)
 
@@ -214,10 +223,10 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 		mutation.Var("key", idempotencyKey)
 	}
 
+	var respData flowSubmissionResponse
 	// run it and capture the response
-	var respData activeFlowRuns
 	if err := d.client.Run(context.Background(), mutation, &respData); err != nil {
-		return errors.Wrap(err, "failed to run flow")
+		return respData.CreateFlowRun.ID, errors.Wrap(err, "failed to run flow")
 	}
-	return nil
+	return respData.CreateFlowRun.ID, nil
 }
