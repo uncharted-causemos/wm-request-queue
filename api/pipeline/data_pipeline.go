@@ -21,11 +21,13 @@ import (
 // DataPipelineRunner services the request queue
 type DataPipelineRunner struct {
 	config.Config
-	client  *graphql.Client
-	queue   queue.RequestQueue
-	done    chan bool
-	running bool
-	mutex   *sync.RWMutex
+	client           *graphql.Client
+	queue            queue.RequestQueue
+	done             chan bool
+	running          bool
+	mutex            *sync.RWMutex
+	current_flow_ids map[string]bool
+	httpClient       http.Client
 }
 
 // NewDataPipelineRunner creates a new instance of a data pipeline runner.
@@ -41,11 +43,13 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 			Logger:      cfg.Logger,
 			Environment: cfg.Environment,
 		},
-		queue:   requestQueue,
-		client:  graphQLClient,
-		done:    make(chan bool),
-		running: false,
-		mutex:   &sync.RWMutex{},
+		queue:            requestQueue,
+		client:           graphQLClient,
+		done:             make(chan bool),
+		running:          false,
+		mutex:            &sync.RWMutex{},
+		current_flow_ids: make(map[string]bool),
+		httpClient:       *httpClient,
 	}
 }
 
@@ -82,12 +86,50 @@ func (d *DataPipelineRunner) Start() {
 					activeFlowRuns := len(running.FlowRun)
 					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
 						flowId := d.Submit()
+						// track flow
+						if flowId != "" {
+							d.mutex.Lock()
+							d.current_flow_ids[flowId] = true
+							d.mutex.Unlock()
+						}
 					}
 				}
+				d.updateCurrentFlows()
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
 			}
 		}
 	}()
+}
+
+// updateCurrentFlows notifies causemos for failed jobs, removes them from
+// current_flow_ids if they failed or succeeded
+func (d *DataPipelineRunner) updateCurrentFlows() {
+	flowIds := d.getIdString()
+	if flowIds != "[]" {
+		current_flows, err := d.getFlowRunsByIds(flowIds)
+		if err != nil {
+			d.Logger.Error(err)
+		}
+		d.mutex.Lock()
+		for i := 0; i < len(current_flows.FlowRun); i++ {
+			// check if a flow we're tracking has failed
+			if current_flows.FlowRun[i].State == "Failed" {
+				delete(d.current_flow_ids, current_flows.FlowRun[i].ID)
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+current_flows.FlowRun[i].ID, nil)
+				if err != nil {
+					d.Logger.Error(err)
+					continue
+				}
+				_, err = d.httpClient.Do(req)
+				if err != nil {
+					d.Logger.Error(err)
+				}
+			} else if current_flows.FlowRun[i].State == "Success" {
+				delete(d.current_flow_ids, current_flows.FlowRun[i].ID)
+			}
+		}
+		d.mutex.Unlock()
+	}
 }
 
 // Submit submits the next item in the queue
@@ -129,7 +171,7 @@ func (d *DataPipelineRunner) Running() bool {
 }
 
 // Status of prefect flow runs.
-type activeFlowRuns struct {
+type flowRuns struct {
 	FlowRun []struct {
 		ID    string
 		State string
@@ -142,8 +184,8 @@ type activeFlowRuns struct {
 }
 
 // Fetches the scheduled/running tasks from prefect.
-func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
-	query := graphql.NewRequest(
+func (d *DataPipelineRunner) getActiveFlowRuns() (*flowRuns, error) {
+	queryString :=
 		`query {
 			flow_run(where: {
 			  _and: [{
@@ -165,11 +207,54 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 				version_group_id
 			  }
 			}
-		  }`,
-	)
+		  }`
+
+	return d.runGraphqlRequest(queryString)
+}
+
+func (d *DataPipelineRunner) getIdString() string {
+	result := "["
+	d.mutex.Lock()
+	for k := range d.current_flow_ids {
+		result += "\"" + k + "\"" + ","
+	}
+	d.mutex.Unlock()
+
+	if result != "[" {
+		return result[:len(result)-1] + "]"
+	}
+	return "[]"
+}
+
+func (d *DataPipelineRunner) getFlowRunsByIds(ids string) (*flowRuns, error) {
+	queryString :=
+		`query {
+			flow_run(where: {
+			  _and: [{
+					id: {_in: ` + ids + `}
+			  }, {
+				  	flow: {version_group_id: {_eq: "` + d.Config.Environment.DataPipelineTileFlowID + `"}}
+			  }
+			  ]
+			}) {
+			  id
+			  state
+			  flow {
+				id
+				name
+				version_group_id
+			  }
+			}
+		  }`
+
+	return d.runGraphqlRequest(queryString)
+}
+
+func (d *DataPipelineRunner) runGraphqlRequest(queryString string) (*flowRuns, error) {
+	query := graphql.NewRequest(queryString)
 
 	// run it and capture the response
-	var respData activeFlowRuns
+	var respData flowRuns
 	if err := d.client.Run(context.Background(), query, &respData); err != nil {
 		return nil, errors.Wrap(err, "failed to fetch running flows")
 	}
