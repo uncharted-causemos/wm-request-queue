@@ -75,7 +75,7 @@ func (d *DataPipelineRunner) Start() {
 			default:
 				// Check to see if prefect is busy.  If not run the next flow request in the
 				// queue.
-				running, err := d.getActiveFlowRuns()
+				running, err := d.GetActiveFlowRuns()
 				if err != nil {
 					d.Logger.Error(err)
 				} else {
@@ -138,8 +138,8 @@ type activeFlowRuns struct {
 	} `json:"flow_run"`
 }
 
-// Fetches the scheduled/running tasks from prefect.
-func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
+// GetActiveFlowRuns fetches the scheduled/running tasks from prefect.
+func (d *DataPipelineRunner) GetActiveFlowRuns() (*activeFlowRuns, error) {
 	query := graphql.NewRequest(
 		`query {
 			flow_run(where: {
