@@ -22,11 +22,10 @@ func StatusRequest(cfg *config.Config, queue queue.RequestQueue, runner *pipelin
 	return func(w http.ResponseWriter, r *http.Request) {
 		Count := queue.Size()
 		IsRunning := runner.Running()
-		runningFlows, err := runner.GetActiveFlowRuns()
+		Running, err := runner.GetAmountOfRunningFlows()
 		if err != nil {
 			handleErrorType(w, errors.New("failed to generate response"), http.StatusInternalServerError, cfg.Logger)
 		}
-		Running := len(runningFlows.FlowRun)
 		if err := handleJSON(w, StatusResponse{Count, IsRunning, Running}); err != nil {
 			handleErrorType(w, errors.New("failed to generate response"), http.StatusInternalServerError, cfg.Logger)
 		}
