@@ -20,14 +20,14 @@ type StatusResponse struct {
 // StatusRequest creates a get request handler that will return status info for the request queue and pipeline runner.
 func StatusRequest(cfg *config.Config, queue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		count := queue.Size()
-		is_running := runner.Running()
-		running_flows, err := runner.GetActiveFlowRuns()
+		Count := queue.Size()
+		IsRunning := runner.Running()
+		runningFlows, err := runner.GetActiveFlowRuns()
 		if err != nil {
 			handleErrorType(w, errors.New("failed to generate response"), http.StatusInternalServerError, cfg.Logger)
 		}
-		running := len(running_flows.FlowRun)
-		if err := handleJSON(w, StatusResponse{count, is_running, running}); err != nil {
+		Running := len(runningFlows.FlowRun)
+		if err := handleJSON(w, StatusResponse{Count, IsRunning, Running}); err != nil {
 			handleErrorType(w, errors.New("failed to generate response"), http.StatusInternalServerError, cfg.Logger)
 		}
 	}

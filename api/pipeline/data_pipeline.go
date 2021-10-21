@@ -139,7 +139,7 @@ type activeFlowRuns struct {
 }
 
 // GetActiveFlowRuns fetches the scheduled/running tasks from prefect.
-func (d *DataPipelineRunner) GetActiveFlowRuns() (*activeFlowRuns, error) {
+func (d *DataPipelineRunner) GetActiveFlowRuns() (activeFlowRuns, error) {
 	query := graphql.NewRequest(
 		`query {
 			flow_run(where: {
@@ -168,9 +168,9 @@ func (d *DataPipelineRunner) GetActiveFlowRuns() (*activeFlowRuns, error) {
 	// run it and capture the response
 	var respData activeFlowRuns
 	if err := d.client.Run(context.Background(), query, &respData); err != nil {
-		return nil, errors.Wrap(err, "failed to fetch running flows")
+		return respData, errors.Wrap(err, "failed to fetch running flows")
 	}
-	return &respData, nil
+	return respData, nil
 }
 
 // Submits a flow run request to prefect.
