@@ -22,13 +22,13 @@ import (
 // DataPipelineRunner services the request queue
 type DataPipelineRunner struct {
 	config.Config
-	client           *graphql.Client
-	queue            queue.RequestQueue
-	done             chan bool
-	running          bool
-	mutex            *sync.RWMutex
-	current_flow_ids map[string]bool
-	httpClient       http.Client
+	client         *graphql.Client
+	queue          queue.RequestQueue
+	done           chan bool
+	running        bool
+	mutex          *sync.RWMutex
+	currentFlowIDs map[string]bool
+	httpClient     http.Client
 }
 
 // NewDataPipelineRunner creates a new instance of a data pipeline runner.
@@ -44,13 +44,13 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 			Logger:      cfg.Logger,
 			Environment: cfg.Environment,
 		},
-		queue:            requestQueue,
-		client:           graphQLClient,
-		done:             make(chan bool),
-		running:          false,
-		mutex:            &sync.RWMutex{},
-		current_flow_ids: make(map[string]bool),
-		httpClient:       *httpClient,
+		queue:          requestQueue,
+		client:         graphQLClient,
+		done:           make(chan bool),
+		running:        false,
+		mutex:          &sync.RWMutex{},
+		currentFlowIDs: make(map[string]bool),
+		httpClient:     *httpClient,
 	}
 }
 
@@ -86,11 +86,11 @@ func (d *DataPipelineRunner) Start() {
 				} else {
 					activeFlowRuns := len(running.FlowRun)
 					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
-						flowId := d.Submit()
+						flowID := d.Submit()
 						// track flow
-						if flowId != "" {
+						if flowID != "" {
 							d.mutex.Lock()
-							d.current_flow_ids[flowId] = true
+							d.currentFlowIDs[flowID] = true
 							d.mutex.Unlock()
 						}
 					}
@@ -103,9 +103,9 @@ func (d *DataPipelineRunner) Start() {
 }
 
 // updateCurrentFlows notifies causemos for failed jobs, removes them from
-// current_flow_ids if they failed or succeeded
+// currentFlowIDs if they failed or succeeded
 func (d *DataPipelineRunner) updateCurrentFlows() {
-	flowIds := d.getIdString()
+	flowIds := d.getIDString()
 	if flowIds != "[]" {
 		current_flows, err := d.getFlowRunsByIds(flowIds)
 		if err != nil {
@@ -116,7 +116,7 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		for i := 0; i < len(current_flows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
 			if current_flows.FlowRun[i].State == "Failed" {
-				delete(d.current_flow_ids, current_flows.FlowRun[i].ID)
+				delete(d.currentFlowIDs, current_flows.FlowRun[i].ID)
 
 				payLoad := url.Values{}
 				payLoad.Set("id", current_flows.FlowRun[i].Flow.ID)
@@ -134,7 +134,7 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					resp.Body.Close()
 				}
 			} else if current_flows.FlowRun[i].State == "Success" {
-				delete(d.current_flow_ids, current_flows.FlowRun[i].ID)
+				delete(d.currentFlowIDs, current_flows.FlowRun[i].ID)
 			}
 		}
 		d.mutex.Unlock()
@@ -221,10 +221,10 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*flowRuns, error) {
 	return d.runGraphqlRequest(queryString)
 }
 
-func (d *DataPipelineRunner) getIdString() string {
+func (d *DataPipelineRunner) getIDString() string {
 	result := "["
 	d.mutex.Lock()
-	for k := range d.current_flow_ids {
+	for k := range d.currentFlowIDs {
 		result += "\"" + k + "\"" + ","
 	}
 	d.mutex.Unlock()
