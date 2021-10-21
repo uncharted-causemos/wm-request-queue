@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -109,20 +110,28 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		current_flows, err := d.getFlowRunsByIds(flowIds)
 		if err != nil {
 			d.Logger.Error(err)
+			return
 		}
 		d.mutex.Lock()
 		for i := 0; i < len(current_flows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
 			if current_flows.FlowRun[i].State == "Failed" {
 				delete(d.current_flow_ids, current_flows.FlowRun[i].ID)
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+current_flows.FlowRun[i].ID, nil)
+
+				payLoad := url.Values{}
+				payLoad.Set("id", current_flows.FlowRun[i].Flow.ID)
+				payLoad.Set("status", "PROCESSING FAILED")
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+current_flows.FlowRun[i].Flow.ID, strings.NewReader(payLoad.Encode()))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
 				}
-				_, err = d.httpClient.Do(req)
+				req.Header.Set("Content-type", "application/x-www-form-urlencoded")
+				resp, err := d.httpClient.Do(req)
 				if err != nil {
 					d.Logger.Error(err)
+				} else {
+					resp.Body.Close()
 				}
 			} else if current_flows.FlowRun[i].State == "Success" {
 				delete(d.current_flow_ids, current_flows.FlowRun[i].ID)
