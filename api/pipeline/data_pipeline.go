@@ -107,21 +107,21 @@ func (d *DataPipelineRunner) Start() {
 func (d *DataPipelineRunner) updateCurrentFlows() {
 	flowIds := d.getIDString()
 	if flowIds != "[]" {
-		current_flows, err := d.getFlowRunsByIds(flowIds)
+		currentFlows, err := d.getFlowRunsByIds(flowIds)
 		if err != nil {
 			d.Logger.Error(err)
 			return
 		}
 		d.mutex.Lock()
-		for i := 0; i < len(current_flows.FlowRun); i++ {
+		for i := 0; i < len(currentFlows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
-			if current_flows.FlowRun[i].State == "Failed" {
-				delete(d.currentFlowIDs, current_flows.FlowRun[i].ID)
+			if currentFlows.FlowRun[i].State == "Failed" {
+				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 
 				payLoad := url.Values{}
-				payLoad.Set("id", current_flows.FlowRun[i].Flow.ID)
+				payLoad.Set("id", currentFlows.FlowRun[i].Flow.ID)
 				payLoad.Set("status", "PROCESSING FAILED")
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+current_flows.FlowRun[i].Flow.ID, strings.NewReader(payLoad.Encode()))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+currentFlows.FlowRun[i].Flow.ID, strings.NewReader(payLoad.Encode()))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
@@ -133,8 +133,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				} else {
 					resp.Body.Close()
 				}
-			} else if current_flows.FlowRun[i].State == "Success" {
-				delete(d.currentFlowIDs, current_flows.FlowRun[i].ID)
+			} else if currentFlows.FlowRun[i].State == "Success" {
+				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 			}
 		}
 		d.mutex.Unlock()
@@ -154,12 +154,12 @@ func (d *DataPipelineRunner) Submit() string {
 	if !ok {
 		d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
 	}
-	flowId, err := d.submitFlowRunRequest(&request)
+	flowID, err := d.submitFlowRunRequest(&request)
 
 	if err != nil {
 		d.Logger.Error(err)
 	}
-	return flowId
+	return flowID
 }
 
 // Stop ends request servicing.
