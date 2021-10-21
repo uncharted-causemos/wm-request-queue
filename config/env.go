@@ -31,7 +31,7 @@ type Environment struct {
 	// Maximum number of flows to run in parallel
 	DataPipelineParallelism int `default:"1" split_words:"true"`
 	// Use persisted queue or default (memory only) queue.
-	DataPipelinePersistedQueue bool `default:"true" split_workds:"true"`
+	DataPipelinePersistedQueue bool `default:"false" split_workds:"true"`
 	// Directory to store the queue data in when persisted queue is used.
 	DataPipelineQueueDir string `default:"./" split_words:"true"`
 	// Name of queue when persisted queue is used.
@@ -41,6 +41,8 @@ type Environment struct {
 	PauseTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
 	// The time to resume sending jobs to prefect
 	ResumeTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
+	// Server address for causemos
+	CauseMosAddr string `default:"http://localhost:8080" split_words:"true"`
 }
 
 const (
