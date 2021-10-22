@@ -1,4 +1,6 @@
 wm-request-queue
+/request_queue/
 .vscode
+.idea
 api/queue/test_data
 __debug_bin
