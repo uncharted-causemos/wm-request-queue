@@ -29,7 +29,7 @@ func EnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue) func(ht
 		// Decode and respond with a 400 on failure
 		err = json.Unmarshal(body, &enqueueMsg)
 		if err != nil {
-			handleErrorType(w, errors.Wrap(err, "failed to read enqueue request body"), http.StatusBadRequest, cfg.Logger)
+			handleErrorType(w, errors.Wrap(err, "failed to unmarshal request body"), http.StatusBadRequest, cfg.Logger)
 			return
 		}
 
