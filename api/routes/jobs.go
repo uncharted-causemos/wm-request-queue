@@ -18,14 +18,13 @@ func JobsRequest(cfg *config.Config, queue queue.RequestQueue) func(http.Respons
 			handleErrorType(w, err, http.StatusInternalServerError, cfg.Logger)
 			return
 		}
-		jobData := make([]pipeline.JobData, len(queueContents))
+		jobData := make([]map[string]interface{}, len(queueContents))
 		for i := 0; i < len(queueContents); i++ {
 			request, ok := queueContents[i].(pipeline.KeyedEnqueueRequestData)
 			if !ok {
 				handleErrorType(w, errors.New("failed to generate response, unexpected datatype found"), http.StatusBadRequest, cfg.Logger)
 			}
-			// jobData[i] = request.EnqueueRequestData
-			// var t pipeline.JobData
+
 			err = json.Unmarshal(request.EnqueueRequestData.RequestData, &jobData[i])
 			if err != nil {
 				handleErrorType(w, errors.New("failed to unmarshal response"), http.StatusInternalServerError, cfg.Logger)
