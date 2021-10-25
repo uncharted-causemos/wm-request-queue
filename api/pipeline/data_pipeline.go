@@ -138,6 +138,15 @@ type activeFlowRuns struct {
 	} `json:"flow_run"`
 }
 
+// GetAmountOfRunningFlows returns the number of running/scheduled flows
+func (d *DataPipelineRunner) GetAmountOfRunningFlows() (int, error) {
+	running, err := d.getActiveFlowRuns()
+	if err != nil {
+		return 0, err
+	}
+	return len(running.FlowRun), nil
+}
+
 // Fetches the scheduled/running tasks from prefect.
 func (d *DataPipelineRunner) getActiveFlowRuns() (*activeFlowRuns, error) {
 	query := graphql.NewRequest(
