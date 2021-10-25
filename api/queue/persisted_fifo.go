@@ -168,3 +168,35 @@ func (r *PersistedFIFOQueue) Clear() error {
 func (r *PersistedFIFOQueue) Close() error {
 	return errors.Wrap(r.queue.Close(), "failed to close queue")
 }
+
+// Contents is used to extract items in the persisted queue
+type Contents struct {
+	Jobs  []interface{}
+	Index int
+}
+
+// Apply is called on each element of the queue each time the contents of the queue
+// must be read
+func (q *Contents) Apply(entry interface{}) error {
+	request, ok := entry.(*queuedItem)
+	if !ok {
+		return errors.Errorf("unexpected type %s", reflect.TypeOf(entry))
+	}
+	q.Jobs[q.Index] = request.Value
+	q.Index++
+
+	return nil
+}
+
+// GetAll retrieves all of the contents in the queue
+func (r *PersistedFIFOQueue) GetAll() ([]interface{}, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	queueContents := Contents{Jobs: make([]interface{}, r.queue.Size()), Index: 0}
+	err := r.queue.ApplyToQueue(&queueContents)
+	if err != nil {
+		return nil, err
+	}
+	return queueContents.Jobs, nil
+}

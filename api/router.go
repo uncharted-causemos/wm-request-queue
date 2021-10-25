@@ -38,11 +38,13 @@ func NewRouter(cfg config.Config, queue queue.RequestQueue, runner *pipeline.Dat
 	r.Route("/data-pipeline", func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		r.Put("/enqueue", routes.EnqueueRequest(&cfg, queue)) // PUT instead of POST due to idempotency
+		r.Put("/bulk-enqueue", routes.BulkEnqueueRequest(&cfg, queue))
 		r.Get("/status", routes.StatusRequest(&cfg, queue, runner))
 		r.Put("/start", routes.StartRequest(&cfg, runner))
 		r.Put("/stop", routes.StopRequest(&cfg, runner))
 		r.Put("/clear", routes.ClearRequest(&cfg, queue))
 		r.Put("/force-flow", routes.ForceDispatchRequest(&cfg, queue, runner))
+		r.Get("/jobs", routes.JobsRequest(&cfg, queue))
 	})
 
 	return r, nil
