@@ -310,8 +310,6 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 	if len(labels) > 0 {
 		mutation.Var("labels", labels)
 	}
-	// mutation.Var("labels", []string{"non-dask", "wm-prefect-server.openstack.uncharted.software"})
-	// mutation.Var("labels", []string{"three-medium", "wm-prefect-server.openstack.uncharted.software"})
 
 	// set the key to use for prefect's idempotency checks - if a pipeline is run to completion,
 	// SUCESSFULLY or UNSUCESSFULLY, an attempt to re-run with the same key will result in it being
