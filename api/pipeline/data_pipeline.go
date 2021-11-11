@@ -119,9 +119,9 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 
 				payLoad := url.Values{}
-				payLoad.Set("id", currentFlows.FlowRun[i].Flow.ID)
+				payLoad.Set("id", currentFlows.FlowRun[i].ID)
 				payLoad.Set("status", "PROCESSING FAILED")
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+currentFlows.FlowRun[i].Flow.ID, strings.NewReader(payLoad.Encode()))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+currentFlows.FlowRun[i].ID, strings.NewReader(payLoad.Encode()))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
