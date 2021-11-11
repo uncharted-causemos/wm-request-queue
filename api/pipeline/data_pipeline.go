@@ -27,7 +27,7 @@ type DataPipelineRunner struct {
 	done           chan bool
 	running        bool
 	mutex          *sync.RWMutex
-	currentFlowIDs map[string]bool
+	currentFlowIDs map[string]KeyedEnqueueRequestData
 	httpClient     http.Client
 }
 
@@ -49,7 +49,7 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 		done:           make(chan bool),
 		running:        false,
 		mutex:          &sync.RWMutex{},
-		currentFlowIDs: make(map[string]bool),
+		currentFlowIDs: make(map[string]KeyedEnqueueRequestData),
 		httpClient:     *httpClient,
 	}
 }
@@ -86,11 +86,11 @@ func (d *DataPipelineRunner) Start() {
 				} else {
 					activeFlowRuns := len(running.FlowRun)
 					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
-						flowID := d.Submit()
+						flowID, request := d.Submit()
 						// track flow
 						if flowID != "" {
 							d.mutex.Lock()
-							d.currentFlowIDs[flowID] = true
+							d.currentFlowIDs[flowID] = request
 							d.mutex.Unlock()
 						}
 					}
@@ -116,12 +116,11 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		for i := 0; i < len(currentFlows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
 			if currentFlows.FlowRun[i].State == "Failed" {
-				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 
 				payLoad := url.Values{}
-				payLoad.Set("id", currentFlows.FlowRun[i].ID)
+				payLoad.Set("id", d.currentFlowIDs[currentFlows.FlowRun[i].ID].RunID)
 				payLoad.Set("status", "PROCESSING FAILED")
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+currentFlows.FlowRun[i].ID, strings.NewReader(payLoad.Encode()))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+d.currentFlowIDs[currentFlows.FlowRun[i].ID].RunID, strings.NewReader(payLoad.Encode()))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
@@ -133,6 +132,7 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				} else {
 					resp.Body.Close()
 				}
+				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 			} else if currentFlows.FlowRun[i].State == "Success" {
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 			}
@@ -142,9 +142,9 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 }
 
 // Submit submits the next item in the queue
-func (d *DataPipelineRunner) Submit() string {
+func (d *DataPipelineRunner) Submit() (string, KeyedEnqueueRequestData) {
 	if d.queue.Size() == 0 {
-		return ""
+		return "", KeyedEnqueueRequestData{}
 	}
 	data, err := d.queue.Dequeue()
 	if err != nil {
@@ -159,7 +159,7 @@ func (d *DataPipelineRunner) Submit() string {
 	if err != nil {
 		d.Logger.Error(err)
 	}
-	return flowID
+	return flowID, request
 }
 
 // Stop ends request servicing.
