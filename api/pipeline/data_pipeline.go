@@ -67,26 +67,13 @@ type prefectAgents struct {
 
 // SetAgents Gets non-dask labelled agents to track
 func (d *DataPipelineRunner) SetAgents() {
-	// query := graphql.NewRequest(
-	// 	`query {
-	// 		agent(
-	// 			where: {
-	// 			  _not:{
-	// 				labels:{_contains: "non-dask"}
-	// 			  }
-	// 			}
-	// 		  ) {
-	// 			id
-	// 			name
-	// 			labels
-	// 		  }
-	// 	}`,
-	// )
 	query := graphql.NewRequest(
 		`query {
 			agent(
 				where: {
-				  labels:{_contains: "non-dask"}
+				  _not:{
+					labels:{_contains: "` + d.Environment.AgentLabelToIgnore + `"}
+				  }
 				}
 			  ) {
 				id
