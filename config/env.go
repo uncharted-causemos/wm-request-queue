@@ -41,6 +41,8 @@ type Environment struct {
 	PauseTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
 	// The time to resume sending jobs to prefect
 	ResumeTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
+	// The label used to filter out prefect agents to track
+	AgentLabelToIgnore string `default:"non-dask" split_words:"true"`
 }
 
 const (
