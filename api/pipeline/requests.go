@@ -4,9 +4,9 @@ package pipeline
 // a data pipeline job.  Additional parameters will not be validated and will be passed through
 // to prefect.
 type EnqueueRequestData struct {
-	ModelID      string   `json:"model_id"`
-	RunID        string   `json:"run_id"`
-	DataPaths    []string `json:"data_paths"`
+	ModelID     string   `json:"model_id"`
+	RunID       string   `json:"run_id"`
+	DataPaths   []string `json:"data_paths"`
 	RequestData []byte
 }
 

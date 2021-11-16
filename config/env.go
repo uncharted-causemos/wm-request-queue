@@ -43,6 +43,8 @@ type Environment struct {
 	ResumeTime string `default:"2021-09-24T19:10:36-04:00" split_words:"true"`
 	// Server address for causemos
 	CauseMosAddr string `default:"http://localhost:8080" split_words:"true"`
+	// The label used to filter out prefect agents to track
+	AgentLabelToIgnore string `default:"non-dask" split_words:"true"`
 }
 
 const (

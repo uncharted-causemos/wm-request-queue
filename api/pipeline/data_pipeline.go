@@ -29,6 +29,7 @@ type DataPipelineRunner struct {
 	mutex          *sync.RWMutex
 	currentFlowIDs map[string]KeyedEnqueueRequestData
 	httpClient     http.Client
+	agents         prefectAgents
 }
 
 // NewDataPipelineRunner creates a new instance of a data pipeline runner.
@@ -39,7 +40,7 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 	// graphql client that uses our http  client - our timeout is applied transitively
 	graphQLClient := graphql.NewClient(cfg.Environment.DataPipelineAddr, graphql.WithHTTPClient(httpClient))
 
-	return &DataPipelineRunner{
+	dataPipeline := &DataPipelineRunner{
 		Config: config.Config{
 			Logger:      cfg.Logger,
 			Environment: cfg.Environment,
@@ -52,6 +53,49 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 		currentFlowIDs: make(map[string]KeyedEnqueueRequestData),
 		httpClient:     *httpClient,
 	}
+
+	dataPipeline.SetAgents()
+
+	return dataPipeline
+}
+
+type agent struct {
+	ID     string
+	Name   string
+	Labels []string
+}
+
+// Current non-dask agents in prefect
+type prefectAgents struct {
+	Agents []agent `json:"agent"`
+}
+
+// SetAgents Gets non-dask labelled agents to track
+func (d *DataPipelineRunner) SetAgents() {
+	query := graphql.NewRequest(
+		`query {
+			agent(
+				where: {
+				  _not:{
+					labels:{_contains: "` + d.Environment.AgentLabelToIgnore + `"}
+				  }
+				}
+			  ) {
+				id
+				name
+				labels
+			  }
+		}`,
+	)
+
+	var respData prefectAgents
+	if err := d.client.Run(context.Background(), query, &respData); err != nil {
+		d.Logger.Error(err)
+	}
+
+	d.mutex.Lock()
+	d.agents = respData
+	d.mutex.Unlock()
 }
 
 // Start initiates request queue servicing.
@@ -78,24 +122,7 @@ func (d *DataPipelineRunner) Start() {
 				d.mutex.Unlock()
 				return
 			default:
-				// Check to see if prefect is busy.  If not run the next flow request in the
-				// queue.
-				running, err := d.getActiveFlowRuns()
-				if err != nil {
-					d.Logger.Error(err)
-				} else {
-					activeFlowRuns := len(running.FlowRun)
-					if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
-						flowID, request := d.Submit()
-						// track flow
-						if flowID != "" {
-							d.mutex.Lock()
-							d.currentFlowIDs[flowID] = request
-							d.mutex.Unlock()
-						}
-					}
-				}
-				d.updateCurrentFlows()
+				d.Submit(false)
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
 			}
 		}
@@ -142,7 +169,56 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 }
 
 // Submit submits the next item in the queue
-func (d *DataPipelineRunner) Submit() (string, KeyedEnqueueRequestData) {
+func (d *DataPipelineRunner) Submit(force bool) (string, KeyedEnqueueRequestData) {
+	var flowID string
+	var request KeyedEnqueueRequestData
+	running, err := d.getActiveFlowRuns()
+	labels := d.getLabelsToRunFlow(running)
+	if force {
+		flowID, request = d.submit(labels)
+		return flowID, request
+	}
+	// Check to see if prefect is busy.  If not run the next flow request in the
+	// queue.
+	if err != nil {
+		d.Logger.Error(err)
+	} else {
+		activeFlowRuns := len(running.FlowRun)
+		if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
+			flowID, request = d.submit(labels)
+			// track flow
+			if flowID != "" {
+				d.mutex.Lock()
+				d.currentFlowIDs[flowID] = request
+				d.mutex.Unlock()
+			}
+		}
+	}
+	d.updateCurrentFlows()
+	return flowID, request
+}
+
+func (d *DataPipelineRunner) getLabelsToRunFlow(flowRuns *flowRuns) []string {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	for _, trackedAgent := range d.agents.Agents {
+		found := true
+		for _, flowRun := range flowRuns.FlowRun {
+			// if agent is occupied, then we don't want to use it
+			if trackedAgent.ID == flowRun.Agent.ID {
+				found = false
+				break
+			}
+		}
+		if found {
+			return trackedAgent.Labels
+		}
+	}
+	return []string{}
+}
+
+func (d *DataPipelineRunner) submit(labels []string) (string, KeyedEnqueueRequestData) {
+
 	if d.queue.Size() == 0 {
 		return "", KeyedEnqueueRequestData{}
 	}
@@ -154,7 +230,7 @@ func (d *DataPipelineRunner) Submit() (string, KeyedEnqueueRequestData) {
 	if !ok {
 		d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
 	}
-	flowID, err := d.submitFlowRunRequest(&request)
+	flowID, err := d.submitFlowRunRequest(&request, labels)
 
 	if err != nil {
 		d.Logger.Error(err)
@@ -189,7 +265,17 @@ type flowRuns struct {
 			Name           string
 			VersionGroupID string `json:"version_group_id"`
 		}
+		Agent agent
 	} `json:"flow_run"`
+}
+
+// GetAmountOfRunningFlows returns the number of running/scheduled flows
+func (d *DataPipelineRunner) GetAmountOfRunningFlows() (int, error) {
+	running, err := d.getActiveFlowRuns()
+	if err != nil {
+		return 0, err
+	}
+	return len(running.FlowRun), nil
 }
 
 // Fetches the scheduled/running tasks from prefect.
@@ -214,6 +300,11 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*flowRuns, error) {
 				id
 				name
 				version_group_id
+			  }
+			  agent {
+				  id
+				  name
+				  labels
 			  }
 			}
 		  }`
@@ -277,7 +368,7 @@ type flowSubmissionResponse struct {
 }
 
 // Submits a flow run request to prefect.
-func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestData) (string, error) {
+func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestData, labels []string) (string, error) {
 	// compose the run name
 	runName := fmt.Sprintf("%s:%s", request.ModelID, request.RunID)
 
@@ -293,11 +384,12 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 	// and the same error can be replicated through the Prefect "Interactive API" in the UI.  It seems
 	// to a bug in how the prefect server parses the JSON stored in the parameters string.  For now the
 	// best we can do is include the JSON through string formatting.
-	requestStr := fmt.Sprintf("mutation($id: String, $runName: String, $key: String) {"+
+	requestStr := fmt.Sprintf("mutation($id: String, $runName: String, $labels: [String!], $key: String) {"+
 		"create_flow_run(input: { "+
 		"   idempotency_key: $key, "+
 		"	version_group_id: $id, "+
 		"	flow_run_name: $runName, "+
+		"	labels: $labels, "+
 		"	parameters: \"%s\""+
 		"}) { "+
 		"	id "+
@@ -308,6 +400,9 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 
 	mutation.Var("id", d.Environment.DataPipelineTileFlowID)
 	mutation.Var("runName", runName)
+	if len(labels) > 0 {
+		mutation.Var("labels", labels)
+	}
 
 	// set the key to use for prefect's idempotency checks - if a pipeline is run to completion,
 	// SUCESSFULLY or UNSUCESSFULLY, an attempt to re-run with the same key will result in it being
