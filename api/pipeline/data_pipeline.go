@@ -169,14 +169,12 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 }
 
 // Submit submits the next item in the queue
-func (d *DataPipelineRunner) Submit(force bool) (string, KeyedEnqueueRequestData) {
-	var flowID string
-	var request KeyedEnqueueRequestData
+func (d *DataPipelineRunner) Submit(force bool) {
 	running, err := d.getActiveFlowRuns()
 	labels := d.getLabelsToRunFlow(running)
 	if force {
-		flowID, request = d.submit(labels)
-		return flowID, request
+		d.submit(labels)
+		return
 	}
 	// Check to see if prefect is busy.  If not run the next flow request in the
 	// queue.
@@ -185,17 +183,10 @@ func (d *DataPipelineRunner) Submit(force bool) (string, KeyedEnqueueRequestData
 	} else {
 		activeFlowRuns := len(running.FlowRun)
 		if activeFlowRuns < d.Config.Environment.DataPipelineParallelism {
-			flowID, request = d.submit(labels)
-			// track flow
-			if flowID != "" {
-				d.mutex.Lock()
-				d.currentFlowIDs[flowID] = request
-				d.mutex.Unlock()
-			}
+			d.submit(labels)
 		}
 	}
 	d.updateCurrentFlows()
-	return flowID, request
 }
 
 func (d *DataPipelineRunner) getLabelsToRunFlow(flowRuns *flowRuns) []string {
@@ -217,10 +208,10 @@ func (d *DataPipelineRunner) getLabelsToRunFlow(flowRuns *flowRuns) []string {
 	return []string{}
 }
 
-func (d *DataPipelineRunner) submit(labels []string) (string, KeyedEnqueueRequestData) {
+func (d *DataPipelineRunner) submit(labels []string) {
 
 	if d.queue.Size() == 0 {
-		return "", KeyedEnqueueRequestData{}
+		return
 	}
 	data, err := d.queue.Dequeue()
 	if err != nil {
@@ -235,7 +226,13 @@ func (d *DataPipelineRunner) submit(labels []string) (string, KeyedEnqueueReques
 	if err != nil {
 		d.Logger.Error(err)
 	}
-	return flowID, request
+
+	// track flow
+	if flowID != "" {
+		d.mutex.Lock()
+		d.currentFlowIDs[flowID] = request
+		d.mutex.Unlock()
+	}
 }
 
 // Stop ends request servicing.
