@@ -18,19 +18,12 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 		path := strings.Split(r.URL.Path, "/")
 		flowRunID := path[len(path)-1]
 
-		for {
-			if runner.IsFlowDone(flowRunID) {
-				break
-			}
+		if !runner.IsFlowDone(flowRunID) {
+			handleErrorType(w, errors.New("flow hasn not finished yet"), http.StatusBadRequest, cfg.Logger)
+			return
 		}
 
 		requestData := runner.RetrieveByFlowRunID(flowRunID)
-
-		for {
-			if runner.IsFlowDone(flowRunID) {
-				break
-			}
-		}
 
 		var enqueueMsg pipeline.EnqueueRequestData
 		err := json.Unmarshal(requestData, &enqueueMsg)
