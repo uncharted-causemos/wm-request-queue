@@ -77,8 +77,10 @@ func main() {
 		requestQueue = queue.NewListFIFOQueue(env.DataPipelineQueueSize)
 	}
 
+	currentTime := time.Now()
 	// Setup the prefect mediator
 	dataPipelineRunner := pipeline.NewDataPipelineRunner(&config, requestQueue)
+	go pauseAndResume(&currentTime, dataPipelineRunner.SetAgents)
 
 	// Setup router
 	r, err := api.NewRouter(config, requestQueue, dataPipelineRunner)
@@ -89,7 +91,6 @@ func main() {
 	// Start listening for updates
 	dataPipelineRunner.Start()
 
-	currentTime := time.Now()
 	pauseTime, err := time.Parse(time.RFC3339, env.PauseTime)
 	if err != nil {
 		sugar.Fatal(err)
@@ -97,14 +98,14 @@ func main() {
 	// ignores time configuration if given pause time date is before when code is ran
 	if currentTime.Before(pauseTime) {
 		sugar.Info("Datapipeline pause time: %s", pauseTime)
-		go pauseAndResume(&pauseTime, dataPipelineRunner.Stop, sugar)
+		go pauseAndResume(&pauseTime, dataPipelineRunner.Stop)
 
 		resumeTime, err := time.Parse(time.RFC3339, env.ResumeTime)
 		if err != nil {
 			sugar.Fatal(err)
 		}
 		sugar.Info("Datapipeline resume time: %s", resumeTime)
-		go pauseAndResume(&resumeTime, dataPipelineRunner.Start, sugar)
+		go pauseAndResume(&resumeTime, dataPipelineRunner.Start)
 	}
 
 	// Start listening
@@ -113,7 +114,7 @@ func main() {
 
 }
 
-func pauseAndResume(triggerTime *time.Time, dataPipelineOperation func(), sugar *zap.SugaredLogger) {
+func pauseAndResume(triggerTime *time.Time, dataPipelineOperation func()) {
 	currentTime := time.Now()
 	resumeHour := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), triggerTime.Hour(), triggerTime.Minute(), triggerTime.Second(), 0, triggerTime.Location())
 	difference := resumeHour.Sub(currentTime)
