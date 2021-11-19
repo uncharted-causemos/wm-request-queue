@@ -45,6 +45,7 @@ func NewRouter(cfg config.Config, queue queue.RequestQueue, runner *pipeline.Dat
 		r.Put("/clear", routes.ClearRequest(&cfg, queue))
 		r.Put("/force-flow", routes.ForceDispatchRequest(&cfg, queue, runner))
 		r.Get("/jobs", routes.JobsRequest(&cfg, queue))
+		r.Put("/retry-flow/{run_id}", routes.RetryFlowRequest(&cfg, queue, runner))
 	})
 
 	return r, nil

@@ -97,6 +97,46 @@ func (d *DataPipelineRunner) SetAgents() {
 	d.mutex.Unlock()
 }
 
+type flowRunParameters struct {
+	FlowRun []struct {
+		ID         string                 `json:"id"`
+		Parameters map[string]interface{} `json:"parameters"`
+	} `json:"flow_run"`
+}
+
+// RetrieveByFlowRunID retrieves byte data given a run ID
+func (d *DataPipelineRunner) RetrieveByFlowRunID(runID string) []byte {
+	query := graphql.NewRequest(
+		`query {
+			flow_run(
+				where:{id: {_eq: "` + runID + `"}}
+			  ) {
+				id
+				parameters
+			  }
+		}`,
+	)
+	var respData flowRunParameters
+	if err := d.client.Run(context.Background(), query, &respData); err != nil {
+		d.Logger.Error(err)
+	}
+	requestData, err := json.Marshal(respData.FlowRun[0].Parameters)
+	if err != nil {
+		d.Logger.Error(err)
+	}
+	return requestData
+}
+
+// IsFlowDone returns whether or not a flow has status Failed/Succeeded
+func (d *DataPipelineRunner) IsFlowDone(runID string) bool {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	if _, ok := d.currentFlowIDs[runID]; ok {
+		return false
+	}
+	return true
+}
+
 // Start initiates request queue servicing.
 func (d *DataPipelineRunner) Start() {
 	d.mutex.RLock()
