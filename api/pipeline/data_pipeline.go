@@ -127,6 +127,15 @@ func (d *DataPipelineRunner) RetrieveByFlowRunID(runID string) []byte {
 	return requestData
 }
 
+func (d *DataPipelineRunner) IsFlowDone(runID string) bool {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	if _, ok := d.currentFlowIDs[runID]; ok {
+		return false
+	}
+	return true
+}
+
 // Start initiates request queue servicing.
 func (d *DataPipelineRunner) Start() {
 	d.mutex.RLock()
