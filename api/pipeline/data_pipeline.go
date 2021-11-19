@@ -146,9 +146,9 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
 					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator}
-				payload_json, _ := json.Marshal(values)
+				payload, _ := json.Marshal(values)
 
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(payload_json))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(payload))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
@@ -168,9 +168,9 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator,
 					"start_time":   d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime.Unix(),
 					"end_time":     time.Now().Unix()}
-				payload_json, _ := json.Marshal(values)
+				payload, _ := json.Marshal(values)
 
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload_json))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
