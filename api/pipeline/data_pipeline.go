@@ -105,6 +105,7 @@ type flowRunParameters struct {
 	} `json:"flow_run"`
 }
 
+// RetrieveByFlowRunID retrieves byte data given a run ID
 func (d *DataPipelineRunner) RetrieveByFlowRunID(runID string) []byte {
 	query := graphql.NewRequest(
 		`query {
@@ -127,6 +128,7 @@ func (d *DataPipelineRunner) RetrieveByFlowRunID(runID string) []byte {
 	return requestData
 }
 
+// IsFlowDone returns whether or not a flow has status Failed/Succeeded
 func (d *DataPipelineRunner) IsFlowDone(runID string) bool {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()

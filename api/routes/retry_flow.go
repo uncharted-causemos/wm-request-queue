@@ -12,23 +12,22 @@ import (
 	"gitlab.uncharted.software/WM/wm-request-queue/config"
 )
 
-// ForceDispatchRequest submits the next item in the queue regardless of prefect's busy status
-// or whether or not the data pipeline is running
+// RetryFlowRequest resubmits a flow given it's run_id in prefect
 func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.Split(r.URL.Path, "/")
-		flow_run_id := path[len(path)-1]
+		flowRunID := path[len(path)-1]
 
 		for {
-			if runner.IsFlowDone(flow_run_id) {
+			if runner.IsFlowDone(flowRunID) {
 				break
 			}
 		}
 
-		requestData := runner.RetrieveByFlowRunID(flow_run_id)
+		requestData := runner.RetrieveByFlowRunID(flowRunID)
 
 		for {
-			if runner.IsFlowDone(flow_run_id) {
+			if runner.IsFlowDone(flowRunID) {
 				break
 			}
 		}
