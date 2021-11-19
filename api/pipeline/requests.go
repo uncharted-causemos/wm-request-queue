@@ -14,7 +14,7 @@ type EnqueueRequestData struct {
 	RequestData []byte
 }
 
-// Used to keep track of what flows we have that haven't failed or succeded
+// FlowData is used to keep track of what flows we have that haven't failed or succeded
 // in the data pipeline
 type FlowData struct {
 	Request   EnqueueRequestData
