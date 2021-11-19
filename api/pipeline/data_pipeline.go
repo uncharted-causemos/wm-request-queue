@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -27,7 +26,7 @@ type DataPipelineRunner struct {
 	done           chan bool
 	running        bool
 	mutex          *sync.RWMutex
-	currentFlowIDs map[string]KeyedEnqueueRequestData
+	currentFlowIDs map[string]FlowData
 	httpClient     http.Client
 	agents         prefectAgents
 }
@@ -50,7 +49,7 @@ func NewDataPipelineRunner(cfg *config.Config, requestQueue queue.RequestQueue) 
 		done:           make(chan bool),
 		running:        false,
 		mutex:          &sync.RWMutex{},
-		currentFlowIDs: make(map[string]KeyedEnqueueRequestData),
+		currentFlowIDs: make(map[string]FlowData),
 		httpClient:     *httpClient,
 	}
 
@@ -143,16 +142,18 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		for i := 0; i < len(currentFlows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
 			if currentFlows.FlowRun[i].State == "Failed" {
+				values := map[string]interface{}{"run_id": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
+					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
+					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
+					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator}
+				payload_json, _ := json.Marshal(values)
 
-				payLoad := url.Values{}
-				payLoad.Set("id", d.currentFlowIDs[currentFlows.FlowRun[i].ID].RunID)
-				payLoad.Set("status", "PROCESSING FAILED")
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/model-runs/"+d.currentFlowIDs[currentFlows.FlowRun[i].ID].RunID, strings.NewReader(payLoad.Encode()))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(payload_json))
 				if err != nil {
 					d.Logger.Error(err)
 					continue
 				}
-				req.Header.Set("Content-type", "application/x-www-form-urlencoded")
+				req.Header.Set("Content-type", "application/json")
 				resp, err := d.httpClient.Do(req)
 				if err != nil {
 					d.Logger.Error(err)
@@ -161,6 +162,26 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				}
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 			} else if currentFlows.FlowRun[i].State == "Success" {
+				values := map[string]interface{}{"run_id": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
+					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
+					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
+					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator,
+					"start_time":   d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime.Unix(),
+					"end_time":     time.Now().Unix()}
+				payload_json, _ := json.Marshal(values)
+
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload_json))
+				if err != nil {
+					d.Logger.Error(err)
+					continue
+				}
+				req.Header.Set("Content-type", "application/json")
+				resp, err := d.httpClient.Do(req)
+				if err != nil {
+					d.Logger.Error(err)
+				} else {
+					resp.Body.Close()
+				}
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 			}
 		}
@@ -230,7 +251,7 @@ func (d *DataPipelineRunner) submit(labels []string) {
 	// track flow
 	if flowID != "" {
 		d.mutex.Lock()
-		d.currentFlowIDs[flowID] = request
+		d.currentFlowIDs[flowID] = FlowData{Request: request.EnqueueRequestData, StartTime: time.Now()}
 		d.mutex.Unlock()
 	}
 }
