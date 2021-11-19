@@ -19,7 +19,7 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 		flowRunID := path[len(path)-1]
 
 		if !runner.IsFlowDone(flowRunID) {
-			handleErrorType(w, errors.New("flow hasn not finished yet"), http.StatusBadRequest, cfg.Logger)
+			handleErrorType(w, errors.New("flow has not finished yet"), http.StatusBadRequest, cfg.Logger)
 			return
 		}
 
