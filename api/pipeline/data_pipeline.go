@@ -166,8 +166,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
 					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator,
-					"start_time":   d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime.UnixMilli(),
-					"end_time":     time.Now().UnixMilli()}
+					"start_time":   d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime.Unix() * 1000,
+					"end_time":     time.Now().Unix() * 1000}
 				payload, _ := json.Marshal(values)
 
 				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
