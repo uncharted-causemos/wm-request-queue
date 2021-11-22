@@ -26,4 +26,5 @@ type FlowData struct {
 type KeyedEnqueueRequestData struct {
 	EnqueueRequestData
 	RequestKey int32
+	StartTime  time.Time
 }
