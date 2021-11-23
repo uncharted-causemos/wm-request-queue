@@ -206,8 +206,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
 					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator,
-					"start_time":   d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime.Unix() * 1000,
-					"end_time":     time.Now().Unix() * 1000}
+					"start_time":   toEpochMilli(d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime),
+					"end_time":     toEpochMilli(time.Now())}
 				payload, _ := json.Marshal(values)
 
 				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
@@ -275,6 +275,7 @@ func (d *DataPipelineRunner) submit(labels []string) {
 		return
 	}
 	data, err := d.queue.Dequeue()
+
 	if err != nil {
 		d.Logger.Error(err)
 	}
@@ -282,6 +283,28 @@ func (d *DataPipelineRunner) submit(labels []string) {
 	if !ok {
 		d.Logger.Error(errors.Errorf("unhandled request type %s", reflect.TypeOf(request)))
 	}
+
+	values := map[string]interface{}{"run_id": request.RunID,
+		"data_id":      request.ModelID,
+		"doc_ids":      request.DocIDs,
+		"is_indicator": request.IsIndicator,
+		"start_time":   toEpochMilli(request.StartTime),
+		"end_time":     toEpochMilli(time.Now())}
+	payload, _ := json.Marshal(values)
+
+	req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/queue-runtime", bytes.NewBuffer(payload))
+	if err != nil {
+		d.Logger.Error(err)
+	} else {
+		req.Header.Set("Content-type", "application/json")
+		resp, err := d.httpClient.Do(req)
+		if err != nil {
+			d.Logger.Error(err)
+		} else {
+			resp.Body.Close()
+		}
+	}
+
 	flowID, err := d.submitFlowRunRequest(&request, labels)
 
 	if err != nil {
@@ -476,4 +499,8 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 		return respData.CreateFlowRun.ID, errors.Wrap(err, "failed to run flow")
 	}
 	return respData.CreateFlowRun.ID, nil
+}
+
+func toEpochMilli(time time.Time) int64 {
+	return time.Unix() * 1000
 }

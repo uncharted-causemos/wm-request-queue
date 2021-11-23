@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"time"
 
 	"github.com/vova616/xxhash"
 	"gitlab.uncharted.software/WM/wm-request-queue/api/pipeline"
@@ -41,6 +42,7 @@ func AddToQueue(enqueueMsg pipeline.EnqueueRequestData, cfg config.Config, reque
 	keyed := pipeline.KeyedEnqueueRequestData{
 		EnqueueRequestData: enqueueMsg,
 		RequestKey:         int32(paramHash),
+		StartTime:          time.Now(),
 	}
 
 	// Enqueue the request if there's room, otherwise let the caller know that the service
