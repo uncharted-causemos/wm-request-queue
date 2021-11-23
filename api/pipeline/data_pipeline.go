@@ -206,8 +206,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
 					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator,
-					"start_time":   toEpochMilli(d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime),
-					"end_time":     toEpochMilli(time.Now())}
+					"start_time":   d.currentFlowIDs[currentFlows.FlowRun[i].ID].StartTime.UnixMilli(),
+					"end_time":     time.Now().UnixMilli()}
 				payload, _ := json.Marshal(values)
 
 				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
@@ -288,8 +288,8 @@ func (d *DataPipelineRunner) submit(labels []string) {
 		"data_id":      request.ModelID,
 		"doc_ids":      request.DocIDs,
 		"is_indicator": request.IsIndicator,
-		"start_time":   toEpochMilli(request.StartTime),
-		"end_time":     toEpochMilli(time.Now())}
+		"start_time":   request.StartTime.UnixMilli(),
+		"end_time":     time.Now().UnixMilli()}
 	payload, _ := json.Marshal(values)
 
 	req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/queue-runtime", bytes.NewBuffer(payload))
@@ -499,8 +499,4 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 		return respData.CreateFlowRun.ID, errors.Wrap(err, "failed to run flow")
 	}
 	return respData.CreateFlowRun.ID, nil
-}
-
-func toEpochMilli(time time.Time) int64 {
-	return time.Unix() * 1000
 }
