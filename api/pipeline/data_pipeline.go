@@ -182,7 +182,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		for i := 0; i < len(currentFlows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
 			if currentFlows.FlowRun[i].State == "Failed" {
-				values := map[string]interface{}{"run_id": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
+				values := map[string]interface{}{"flow_id": currentFlows.FlowRun[i].ID,
+					"run_id":       d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
 					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator}
@@ -202,7 +203,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				}
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
 			} else if currentFlows.FlowRun[i].State == "Success" {
-				values := map[string]interface{}{"run_id": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
+				values := map[string]interface{}{"flow_id": currentFlows.FlowRun[i].ID,
+					"run_id":       d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
 					"doc_ids":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.DocIDs,
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator,
