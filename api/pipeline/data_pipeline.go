@@ -188,7 +188,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator}
 				payload, _ := json.Marshal(values)
 
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(payload))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(payload))
+				req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 				if err != nil {
 					d.Logger.Error(err)
 					continue
@@ -210,7 +211,8 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"end_time":     time.Now().UnixMilli()}
 				payload, _ := json.Marshal(values)
 
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
+				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
+				req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 				if err != nil {
 					d.Logger.Error(err)
 					continue
@@ -292,10 +294,11 @@ func (d *DataPipelineRunner) submit(labels []string) {
 		"end_time":     time.Now().UnixMilli()}
 	payload, _ := json.Marshal(values)
 
-	req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CauseMosAddr+"/api/maas/pipeline-reporting/queue-runtime", bytes.NewBuffer(payload))
+	req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/queue-runtime", bytes.NewBuffer(payload))
 	if err != nil {
 		d.Logger.Error(err)
 	} else {
+		req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 		req.Header.Set("Content-type", "application/json")
 		resp, err := d.httpClient.Do(req)
 		if err != nil {
