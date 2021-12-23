@@ -189,17 +189,11 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 					"is_indicator": d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.IsIndicator}
 				payload, _ := json.Marshal(values)
 
-				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(payload))
-				req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
-				if err != nil {
-					d.Logger.Error(err)
-					continue
-				}
-				req.Header.Set("Content-type", "application/json")
-				resp, err := d.httpClient.Do(req)
+				resp, err := d.notifyFailure(&payload)
 				if err != nil {
 					d.Logger.Error(err)
 				} else {
+					d.Logger.Infof("Flow %s failed, notified causemos", currentFlows.FlowRun[i].ID)
 					resp.Body.Close()
 				}
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
@@ -223,7 +217,15 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				resp, err := d.httpClient.Do(req)
 				if err != nil {
 					d.Logger.Error(err)
+					resp, err = d.notifyFailure(&payload)
+					if err != nil {
+						d.Logger.Error(err)
+					} else {
+						d.Logger.Infof("Flow %s failed to notify processing-succeeded, notified causemos as fail", currentFlows.FlowRun[i].ID)
+						resp.Body.Close()
+					}
 				} else {
+					d.Logger.Infof("Flow %s succeeded, notified causemos", currentFlows.FlowRun[i].ID)
 					resp.Body.Close()
 				}
 				delete(d.currentFlowIDs, currentFlows.FlowRun[i].ID)
@@ -231,6 +233,19 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		}
 		d.mutex.Unlock()
 	}
+}
+
+func (d *DataPipelineRunner) notifyFailure(payload *[]byte) (*http.Response, error) {
+
+	req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(*payload))
+	req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
+	if err != nil {
+		d.Logger.Error(err)
+		return nil, err
+	}
+	req.Header.Set("Content-type", "application/json")
+	resp, err := d.httpClient.Do(req)
+	return resp, err
 }
 
 // Submit submits the next item in the queue
