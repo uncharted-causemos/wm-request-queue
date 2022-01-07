@@ -26,10 +26,13 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 			handleErrorType(w, errors.Wrap(err, "failed to read enqueue request body"), http.StatusBadRequest, cfg.Logger)
 			return
 		}
-		err = json.Unmarshal(body, &enqueueParams)
-		if err != nil {
-			handleErrorType(w, errors.Wrap(err, "failed to unmarshal request body"), http.StatusBadRequest, cfg.Logger)
-			return
+		hasNewParams := len(body) > 0
+		if len(body) > 0 {
+			err = json.Unmarshal(body, &enqueueParams)
+			if err != nil {
+				handleErrorType(w, errors.Wrap(err, "failed to unmarshal request body"), http.StatusBadRequest, cfg.Logger)
+				return
+			}
 		}
 
 		if !runner.IsFlowDone(flowRunID) {
@@ -48,20 +51,22 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 		// Store the full request body for forwarding to prefect
 		enqueueMsg.RequestData = requestData
 
-		if enqueueParams.ModelID != "" {
-			enqueueMsg.ModelID = enqueueParams.ModelID
-		}
-		if enqueueParams.RunID != "" {
-			enqueueMsg.RunID = enqueueParams.RunID
-		}
-		if enqueueParams.IsIndicator != enqueueMsg.IsIndicator {
-			enqueueMsg.IsIndicator = enqueueParams.IsIndicator
-		}
-		if len(enqueueParams.DocIDs) == 0 {
-			enqueueMsg.DocIDs = enqueueParams.DocIDs
-		}
-		if len(enqueueParams.DataPaths) == 0 {
-			enqueueMsg.DataPaths = enqueueParams.DataPaths
+		if hasNewParams {
+			if enqueueParams.ModelID != "" {
+				enqueueMsg.ModelID = enqueueParams.ModelID
+			}
+			if enqueueParams.RunID != "" {
+				enqueueMsg.RunID = enqueueParams.RunID
+			}
+			if enqueueParams.IsIndicator != enqueueMsg.IsIndicator {
+				enqueueMsg.IsIndicator = enqueueParams.IsIndicator
+			}
+			if len(enqueueParams.DocIDs) == 0 {
+				enqueueMsg.DocIDs = enqueueParams.DocIDs
+			}
+			if len(enqueueParams.DataPaths) == 0 {
+				enqueueMsg.DataPaths = enqueueParams.DataPaths
+			}
 		}
 
 		err = helpers.CheckEnqueueParams(enqueueMsg)

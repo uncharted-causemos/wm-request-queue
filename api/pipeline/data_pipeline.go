@@ -208,11 +208,11 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				payload, _ := json.Marshal(values)
 
 				req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/processing-succeeded", bytes.NewBuffer(payload))
-				req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 				if err != nil {
 					d.Logger.Error(err)
 					continue
 				}
+				req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 				req.Header.Set("Content-type", "application/json")
 				resp, err := d.httpClient.Do(req)
 				if err != nil {
@@ -238,11 +238,11 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 func (d *DataPipelineRunner) notifyFailure(payload *[]byte) (*http.Response, error) {
 
 	req, err := http.NewRequest(http.MethodPut, d.Config.Environment.CausemosAddr+"/api/maas/pipeline-reporting/processing-failed", bytes.NewBuffer(*payload))
-	req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 	if err != nil {
 		d.Logger.Error(err)
 		return nil, err
 	}
+	req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 	req.Header.Set("Content-type", "application/json")
 	resp, err := d.httpClient.Do(req)
 	return resp, err
