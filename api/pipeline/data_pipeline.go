@@ -161,7 +161,7 @@ func (d *DataPipelineRunner) Start() {
 				d.mutex.Unlock()
 				return
 			default:
-				d.Submit(false)
+				d.Submit(false, make([]string, 0))
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
 			}
 		}
@@ -249,11 +249,15 @@ func (d *DataPipelineRunner) notifyFailure(payload *[]byte) (*http.Response, err
 }
 
 // Submit submits the next item in the queue
-func (d *DataPipelineRunner) Submit(force bool) {
+func (d *DataPipelineRunner) Submit(force bool, providedLabels []string) {
 	running, err := d.getActiveFlowRuns()
 	labels := d.getLabelsToRunFlow(running)
 	if force {
-		d.submit(labels)
+		if len(providedLabels) > 0 {
+			d.submit(providedLabels)
+		} else {
+			d.submit(labels)
+		}
 		return
 	}
 	// Check to see if prefect is busy.  If not run the next flow request in the
@@ -501,7 +505,9 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 
 	mutation.Var("id", d.Environment.DataPipelineTileFlowID)
 	mutation.Var("runName", runName)
-	if len(labels) > 0 {
+	if len(request.Labels) > 0 {
+		mutation.Var("labels", request.Labels)
+	} else if len(labels) > 0 {
 		mutation.Var("labels", labels)
 	}
 

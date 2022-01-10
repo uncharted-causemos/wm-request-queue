@@ -41,7 +41,7 @@ func EnqueueRequest(cfg *config.Config, requestQueue queue.RequestQueue) func(ht
 			handleErrorType(w, err, http.StatusBadRequest, cfg.Logger)
 		}
 
-		result, err := helpers.AddToQueue(enqueueMsg, *cfg, requestQueue)
+		result, err := helpers.AddToQueue(enqueueMsg, *cfg, requestQueue, make([]string, 0))
 		if err != nil {
 			handleErrorType(w, err, http.StatusInternalServerError, cfg.Logger)
 			return

@@ -15,6 +15,8 @@ import (
 // RetryFlowRequest resubmits a flow given it's run_id in prefect
 func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		labelsParam := r.URL.Query().Get("labels")
+		labels := strings.Split(labelsParam, ",")
 		path := strings.Split(r.URL.Path, "/")
 		flowRunID := path[len(path)-1]
 
@@ -39,7 +41,7 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 			handleErrorType(w, err, http.StatusBadRequest, cfg.Logger)
 		}
 
-		result, err := helpers.AddToQueue(enqueueMsg, *cfg, requestQueue)
+		result, err := helpers.AddToQueue(enqueueMsg, *cfg, requestQueue, labels)
 		if err != nil {
 			handleErrorType(w, err, http.StatusInternalServerError, cfg.Logger)
 			return
