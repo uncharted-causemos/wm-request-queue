@@ -15,6 +15,6 @@ func ForceDispatchRequest(cfg *config.Config, requestQueue queue.RequestQueue, r
 	return func(w http.ResponseWriter, r *http.Request) {
 		labelsParam := r.URL.Query().Get("labels")
 		labels := strings.Split(labelsParam, ",")
-		runner.Submit(true, labels)
+		runner.Submit(pipeline.SubmitParams{Force: true, ProvidedLabels: labels})
 	}
 }

@@ -29,3 +29,8 @@ type KeyedEnqueueRequestData struct {
 	StartTime  time.Time
 	Labels     []string
 }
+
+type SubmitParams struct {
+	Force          bool
+	ProvidedLabels []string
+}

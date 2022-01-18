@@ -161,7 +161,7 @@ func (d *DataPipelineRunner) Start() {
 				d.mutex.Unlock()
 				return
 			default:
-				d.Submit(false, make([]string, 0))
+				d.Submit(SubmitParams{Force: false})
 				time.Sleep(time.Duration(d.Environment.DataPipelinePollIntervalSec) * time.Second)
 			}
 		}
@@ -249,12 +249,13 @@ func (d *DataPipelineRunner) notifyFailure(payload *[]byte) (*http.Response, err
 }
 
 // Submit submits the next item in the queue
-func (d *DataPipelineRunner) Submit(force bool, providedLabels []string) {
+func (d *DataPipelineRunner) Submit(params SubmitParams) { //force bool, providedLabels []string) {
+
 	running, err := d.getActiveFlowRuns()
 	labels := d.getLabelsToRunFlow(running)
-	if force {
-		if len(providedLabels) > 0 {
-			d.submit(providedLabels)
+	if params.Force {
+		if len(params.ProvidedLabels) > 0 {
+			d.submit(params.ProvidedLabels)
 		} else {
 			d.submit(labels)
 		}
