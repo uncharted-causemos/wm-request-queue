@@ -18,7 +18,7 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.Split(r.URL.Path, "/")
 		flowRunID := path[len(path)-1]
-		var enqueueParams pipeline.EnqueueRequestData
+		var enqueueParams map[string]interface{}
 
 		body, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
@@ -42,33 +42,38 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 
 		requestData := runner.RetrieveByFlowRunID(flowRunID)
 
-		var enqueueMsg pipeline.EnqueueRequestData
-		err = json.Unmarshal(requestData, &enqueueMsg)
+		var enqueueMsgTemp map[string]interface{}
+		err = json.Unmarshal(requestData, &enqueueMsgTemp)
 		if err != nil {
 			handleErrorType(w, errors.Wrap(err, "failed to unmarshal request body"), http.StatusBadRequest, cfg.Logger)
 			return
 		}
 
 		if hasNewParams {
-			if enqueueParams.ModelID != "" {
-				enqueueMsg.ModelID = enqueueParams.ModelID
-			}
-			if enqueueParams.RunID != "" {
-				enqueueMsg.RunID = enqueueParams.RunID
-			}
-			if enqueueParams.IsIndicator != enqueueMsg.IsIndicator {
-				enqueueMsg.IsIndicator = enqueueParams.IsIndicator
-			}
-			if len(enqueueParams.DocIDs) > 0 {
-				enqueueMsg.DocIDs = enqueueParams.DocIDs
-			}
-			if len(enqueueParams.DataPaths) > 0 {
-				enqueueMsg.DataPaths = enqueueParams.DataPaths
+			for key, val := range enqueueParams {
+				enqueueMsgTemp[key] = val
 			}
 		}
 
+		// Re-marshal to create RequestData
+		enqueueBody, err := json.Marshal(enqueueMsgTemp)
+		if err != nil {
+			handleErrorType(w, errors.Wrap(err, "failed to nmarshal request body"), http.StatusBadRequest, cfg.Logger)
+			return
+		}
+		// re-unmarshal to convert from dict -> struct easily
+		var enqueueMsg pipeline.EnqueueRequestData
+		err = json.Unmarshal(enqueueBody, &enqueueMsg)
+		if err != nil {
+			handleErrorType(w, errors.Wrap(err, "failed to unmarshal request body"), http.StatusBadRequest, cfg.Logger)
+			return
+		}
 		// Store the full request body for forwarding to prefect
-		enqueueMsg.RequestData = body
+		enqueueMsg.RequestData, err = json.Marshal(enqueueMsgTemp)
+		if err != nil {
+			handleErrorType(w, errors.Wrap(err, "failed to nmarshal request body"), http.StatusBadRequest, cfg.Logger)
+			return
+		}
 
 		err = helpers.CheckEnqueueParams(enqueueMsg)
 		if err != nil {
