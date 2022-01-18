@@ -30,6 +30,7 @@ type KeyedEnqueueRequestData struct {
 	Labels     []string
 }
 
+// SubmitParams is to be used for the Submit function in DataPipelineRunner
 type SubmitParams struct {
 	Force          bool
 	ProvidedLabels []string
