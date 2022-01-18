@@ -48,8 +48,6 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 			handleErrorType(w, errors.Wrap(err, "failed to unmarshal request body"), http.StatusBadRequest, cfg.Logger)
 			return
 		}
-		// Store the full request body for forwarding to prefect
-		enqueueMsg.RequestData = requestData
 
 		if hasNewParams {
 			if enqueueParams.ModelID != "" {
@@ -61,13 +59,16 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 			if enqueueParams.IsIndicator != enqueueMsg.IsIndicator {
 				enqueueMsg.IsIndicator = enqueueParams.IsIndicator
 			}
-			if len(enqueueParams.DocIDs) == 0 {
+			if len(enqueueParams.DocIDs) > 0 {
 				enqueueMsg.DocIDs = enqueueParams.DocIDs
 			}
-			if len(enqueueParams.DataPaths) == 0 {
+			if len(enqueueParams.DataPaths) > 0 {
 				enqueueMsg.DataPaths = enqueueParams.DataPaths
 			}
 		}
+
+		// Store the full request body for forwarding to prefect
+		enqueueMsg.RequestData = body
 
 		err = helpers.CheckEnqueueParams(enqueueMsg)
 		if err != nil {
