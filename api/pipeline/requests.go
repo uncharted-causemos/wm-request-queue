@@ -27,4 +27,11 @@ type KeyedEnqueueRequestData struct {
 	EnqueueRequestData
 	RequestKey int32
 	StartTime  time.Time
+	Labels     []string
+}
+
+// SubmitParams is to be used for the Submit function in DataPipelineRunner
+type SubmitParams struct {
+	Force          bool
+	ProvidedLabels []string
 }

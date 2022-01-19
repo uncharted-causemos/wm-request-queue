@@ -34,7 +34,7 @@ func CheckEnqueueParams(enqueueMsg pipeline.EnqueueRequestData) error {
 }
 
 // AddToQueue takes a given job and adds it to the queue
-func AddToQueue(enqueueMsg pipeline.EnqueueRequestData, cfg config.Config, requestQueue queue.RequestQueue) (bool, error) {
+func AddToQueue(enqueueMsg pipeline.EnqueueRequestData, cfg config.Config, requestQueue queue.RequestQueue, labels []string) (bool, error) {
 	// Create a hash from the request data
 	paramHash := xxhash.Checksum32(enqueueMsg.RequestData)
 
@@ -43,6 +43,7 @@ func AddToQueue(enqueueMsg pipeline.EnqueueRequestData, cfg config.Config, reque
 		EnqueueRequestData: enqueueMsg,
 		RequestKey:         int32(paramHash),
 		StartTime:          time.Now(),
+		Labels:             labels,
 	}
 
 	// Enqueue the request if there's room, otherwise let the caller know that the service
