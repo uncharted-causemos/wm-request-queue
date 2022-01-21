@@ -69,7 +69,7 @@ func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runne
 			return
 		}
 		// Store the full request body for forwarding to prefect
-		enqueueMsg.RequestData, err = json.Marshal(enqueueMsgTemp)
+		enqueueMsg.RequestData = enqueueBody
 		if err != nil {
 			handleErrorType(w, errors.Wrap(err, "failed to nmarshal request body"), http.StatusBadRequest, cfg.Logger)
 			return
