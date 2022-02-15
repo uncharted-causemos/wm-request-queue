@@ -181,7 +181,7 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 		d.mutex.Lock()
 		for i := 0; i < len(currentFlows.FlowRun); i++ {
 			// check if a flow we're tracking has failed
-			if currentFlows.FlowRun[i].State == "Failed" {
+			if currentFlows.FlowRun[i].State == "Failed" || currentFlows.FlowRun[i].State == "Cancelled" {
 				values := map[string]interface{}{"flow_id": currentFlows.FlowRun[i].ID,
 					"run_id":       d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.RunID,
 					"data_id":      d.currentFlowIDs[currentFlows.FlowRun[i].ID].Request.ModelID,
@@ -192,6 +192,9 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				resp, err := d.notifyFailure(&payload)
 				if err != nil {
 					d.Logger.Error(err)
+				} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
+					d.Logger.Errorf("Flow %s failed, failed to notify Causemos. Response %d", currentFlows.FlowRun[i].ID, resp.StatusCode)
+					resp.Body.Close()
 				} else {
 					d.Logger.Infof("Flow %s failed, notified causemos", currentFlows.FlowRun[i].ID)
 					resp.Body.Close()
@@ -215,11 +218,19 @@ func (d *DataPipelineRunner) updateCurrentFlows() {
 				req.SetBasicAuth(d.Environment.Username, d.Environment.Password)
 				req.Header.Set("Content-type", "application/json")
 				resp, err := d.httpClient.Do(req)
-				if err != nil {
-					d.Logger.Error(err)
+				if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+					if err != nil {
+						d.Logger.Error(err)
+					} else {
+						d.Logger.Warnf("Error notifying Causemos. Response %d", resp.StatusCode)
+						resp.Body.Close()
+					}
 					resp, err = d.notifyFailure(&payload)
 					if err != nil {
 						d.Logger.Error(err)
+					} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
+						d.Logger.Errorf("Failed to notify Causemos. Response %d", resp.StatusCode)
+						resp.Body.Close()
 					} else {
 						d.Logger.Infof("Flow %s failed to notify processing-succeeded, notified causemos as fail", currentFlows.FlowRun[i].ID)
 						resp.Body.Close()

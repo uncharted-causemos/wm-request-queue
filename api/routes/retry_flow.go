@@ -17,7 +17,12 @@ import (
 func RetryFlowRequest(cfg *config.Config, requestQueue queue.RequestQueue, runner *pipeline.DataPipelineRunner) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		labelsParam := r.URL.Query().Get("labels")
-		labels := strings.Split(labelsParam, ",")
+		var labels []string
+		if labelsParam == "" {
+			labels = make([]string, 0)
+		} else {
+			labels = strings.Split(labelsParam, ",")
+		}
 		path := strings.Split(r.URL.Path, "/")
 		flowRunID := path[len(path)-1]
 		var enqueueParams map[string]interface{}
