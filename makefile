@@ -11,11 +11,15 @@ all:
 	@echo "make <cmd>"
 	@echo ""
 	@echo "commands:"
+	@echo "  run           - run the queue server"
 	@echo "  build         - build the source code"
 	@echo "  fmt           - format the source code"
 	@echo "  lint          - lint the source code"
 	@echo "  install       - install dev dependencies"
 	@echo "  test          - run tests"
+
+run:
+	@go run ./main.go
 
 lint:
 	@go vet ./...
@@ -38,5 +42,4 @@ test: build
 
 install:
 	@go get -u golang.org/x/lint/golint
-	@go get github.com/unchartedsoftware/witch
 

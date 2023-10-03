@@ -6,6 +6,6 @@ import (
 
 // Config defines cross-cutting concerns.
 type Config struct {
-	Logger       *zap.SugaredLogger
-	Environment  *Environment
+	Logger      *zap.SugaredLogger
+	Environment *Environment
 }
