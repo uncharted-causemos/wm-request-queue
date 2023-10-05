@@ -53,8 +53,6 @@ github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5Cc
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/uncharted-causemos/dque v0.0.0-20210920193637-0819861e0649 h1:NkhvFb5PcmUZKLp7WPLh5OBByGJkMt6N577P6KzaSzw=
 github.com/uncharted-causemos/dque v0.0.0-20210920193637-0819861e0649/go.mod h1:7Zuyit5+1tkUgh9I/IhysfDJ7IuduGsh8BwXYXJTNhA=
-github.com/unchartedsoftware/witch v0.0.0-20200617171400-4f405404126f h1:CfRRJzp88GWCAR3+GrJ/slqrbhCqesDRY/FmT6s4uF8=
-github.com/unchartedsoftware/witch v0.0.0-20200617171400-4f405404126f/go.mod h1:xN7cr17jYCNJzZO78A4c0BcspGPbSAdFNq1NfDEE2do=
 github.com/urfave/cli v1.22.4 h1:u7tSpNPPswAFymm8IehJhy4uJMlUuU/GmqSkvJ1InXA=
 github.com/urfave/cli v1.22.4/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/vova616/xxhash v0.0.0-20191210231457-381b6b669083 h1:dzAhOqkaXuTEbNC5GDEv2+6fTYK6Dpu4LxDAs8jCRS8=
