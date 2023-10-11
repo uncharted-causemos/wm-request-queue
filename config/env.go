@@ -24,8 +24,10 @@ type Environment struct {
 	DataPipelineQueueSize int `default:"100" split_words:"true"`
 	// Prefect polling interaval
 	DataPipelinePollIntervalSec int `default:"5" split_words:"true"`
-	// Flow version group ID for the baseline tile flow
-	DataPipelineTileFlowID string `default:"4d8d9239-2594-45af-9ec9-d24eafb1f1af" split_words:"true"`
+	// Prefect project name for the project of the flow
+	DataPipelineProjectName string `default:"Development" split_words:"true"`
+	// Prefect flow name of the data pipeline
+	DataPipelineFlowName string `default:"Data Pipeline" split_words:"true"`
 	// Enable idempotency checks on prefect
 	DataPipelineIdempotencyChecks string `default:"all" split_words:"true"`
 	// Maximum number of flows to run in parallel

@@ -397,7 +397,7 @@ func (d *DataPipelineRunner) GetAmountOfRunningFlows() (int, error) {
 
 // Fetches the scheduled/running tasks from prefect.
 func (d *DataPipelineRunner) getActiveFlowRuns() (*flowRuns, error) {
-	queryString :=
+	queryString := fmt.Sprintf(
 		`query {
 			flow_run(where: {
 			  _and: [{
@@ -407,7 +407,7 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*flowRuns, error) {
 					{state: {_eq: "Running"}}
 				]
 			  }, {
-				  flow: {version_group_id: {_eq: "` + d.Config.Environment.DataPipelineTileFlowID + `"}}
+					flow: { _and: [{ name: {_eq: "%s"}}, { project: { name: {_eq: "%s"}}}]}
 			  }
 			  ]
 			}) {
@@ -424,7 +424,7 @@ func (d *DataPipelineRunner) getActiveFlowRuns() (*flowRuns, error) {
 				  labels
 			  }
 			}
-		  }`
+		  }`, d.Config.Environment.DataPipelineFlowName, d.Config.Environment.DataPipelineProjectName)
 
 	return d.runGraphqlRequest(queryString)
 }
@@ -444,13 +444,13 @@ func (d *DataPipelineRunner) getIDString() string {
 }
 
 func (d *DataPipelineRunner) getFlowRunsByIds(ids string) (*flowRuns, error) {
-	queryString :=
+	queryString := fmt.Sprintf(
 		`query {
 			flow_run(where: {
 			  _and: [{
-					id: {_in: ` + ids + `}
+					id: {_in: %s}
 			  }, {
-				  	flow: {version_group_id: {_eq: "` + d.Config.Environment.DataPipelineTileFlowID + `"}}
+					flow: { _and: [{ name: {_eq: "%s"}}, { project: { name: {_eq: "%s"}}}]}
 			  }
 			  ]
 			}) {
@@ -462,7 +462,7 @@ func (d *DataPipelineRunner) getFlowRunsByIds(ids string) (*flowRuns, error) {
 				version_group_id
 			  }
 			}
-		  }`
+		  }`, ids, d.Config.Environment.DataPipelineFlowName, d.Config.Environment.DataPipelineProjectName)
 
 	return d.runGraphqlRequest(queryString)
 }
@@ -478,6 +478,11 @@ func (d *DataPipelineRunner) runGraphqlRequest(queryString string) (*flowRuns, e
 	return &respData, nil
 }
 
+type flowResponse struct {
+	Flow []struct {
+		VersionGroupID string `json:"version_group_id"`
+	} `json:"flow"`
+}
 type flowSubmissionResponse struct {
 	CreateFlowRun struct {
 		ID string
@@ -488,6 +493,31 @@ type flowSubmissionResponse struct {
 func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestData, labels []string) (string, error) {
 	// compose the run name
 	runName := fmt.Sprintf("%s:%s", request.ModelID, request.RunID)
+
+	query := graphql.NewRequest(fmt.Sprintf(`
+		query {
+			flow(where: {
+				_and: [
+					{name: { _eq: "%s"}},
+					{ project: { name: { _eq: "%s"}}}
+				]
+			}) {
+				version_group_id
+			}
+		}
+	`, d.Environment.DataPipelineFlowName, d.Environment.DataPipelineProjectName))
+
+	var resData flowResponse
+	// run it and capture the response
+	if err := d.client.Run(context.Background(), query, &resData); err != nil {
+		return "", errors.Wrap(err, "failed to fetch flow information")
+	}
+
+	if len(resData.Flow) == 0 {
+		return "", fmt.Errorf("flow, '%s' with project, '%s', does not exist", d.Environment.DataPipelineFlowName, d.Environment.DataPipelineProjectName)
+	}
+
+	flowVersionGroupId := resData.Flow[0].VersionGroupID
 
 	// prefect server expects JSON to be escaped and without newlines/tabs
 	buffer := bytes.Buffer{}
@@ -515,7 +545,7 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 
 	mutation := graphql.NewRequest(requestStr)
 
-	mutation.Var("id", d.Environment.DataPipelineTileFlowID)
+	mutation.Var("id", flowVersionGroupId)
 	mutation.Var("runName", runName)
 	if len(request.Labels) > 0 {
 		mutation.Var("labels", request.Labels)
