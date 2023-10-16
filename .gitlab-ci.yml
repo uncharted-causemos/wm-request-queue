@@ -22,7 +22,6 @@ stages:
   before_script:
     # Gitlab reads following login information from ~/.netrc file
     - echo "machine gitlab.uncharted.software login ${GITLAB_LOGIN} password ${GITLAB_TOKEN}" > ~/.netrc
-    - go install golang.org/x/lint/golint
     - go mod vendor
 
 lint:
