@@ -517,7 +517,7 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 		return "", fmt.Errorf("flow, '%s' with project, '%s', does not exist", d.Environment.DataPipelineFlowName, d.Environment.DataPipelineProjectName)
 	}
 
-	flowVersionGroupId := resData.Flow[0].VersionGroupID
+	flowVersionGroupID := resData.Flow[0].VersionGroupID
 
 	// prefect server expects JSON to be escaped and without newlines/tabs
 	buffer := bytes.Buffer{}
@@ -545,7 +545,7 @@ func (d *DataPipelineRunner) submitFlowRunRequest(request *KeyedEnqueueRequestDa
 
 	mutation := graphql.NewRequest(requestStr)
 
-	mutation.Var("id", flowVersionGroupId)
+	mutation.Var("id", flowVersionGroupID)
 	mutation.Var("runName", runName)
 	if len(request.Labels) > 0 {
 		mutation.Var("labels", request.Labels)
