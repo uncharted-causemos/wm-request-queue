@@ -1,4 +1,4 @@
-export GOPROXY=direct
+export GOPROXY=https://proxy.golang.org,direct
 
 VERSION=`git describe --tags`
 TIMESTAMP=`date +%FT%T%z`
