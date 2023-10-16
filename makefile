@@ -1,4 +1,4 @@
-port GOPROXY=direct
+export GOPROXY=direct
 
 VERSION=`git describe --tags`
 TIMESTAMP=`date +%FT%T%z`
@@ -41,6 +41,5 @@ test: build
 	@go test -race -cover $$(go list ./...)
 
 install:
-	@go get gitlab.uncharted.software/WM/wm-request-queue
 	@go install golang.org/x/lint/golint
 
