@@ -41,6 +41,6 @@ test: build
 	@go test -race -cover $$(go list ./...)
 
 install:
-	@go get gitlab.uncharted.software/WM/wm-request-queue
+	@go install gitlab.uncharted.software/WM/wm-request-queue
 	@go install golang.org/x/lint/golint
 
