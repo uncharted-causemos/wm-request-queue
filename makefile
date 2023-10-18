@@ -42,5 +42,4 @@ test: build
 
 install:
 	@go install gitlab.uncharted.software/WM/wm-request-queue
-	@go install golang.org/x/lint/golint
 
